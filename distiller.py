@@ -28,6 +28,7 @@ def distillation_loss(source, target, margin):
     loss = loss * ((source > target) | (target > 0)).float()
     return loss.sum()
 
+# Makes sense
 def dist_loss(source, target):
     loss = torch.nn.functional.mse_loss(source, target, reduction="none")
     loss = loss * ((source > target) | (target > 0)).float()
@@ -99,7 +100,7 @@ class Distiller(nn.Module):
           maxpool = nn.MaxPool2d(kernel_size=(patch_w, patch_h), stride=(patch_w, patch_h), padding=0, ceil_mode=True) # change
           pa_loss = self.args.pa_lambda * self.criterion(maxpool(feat_S), maxpool(feat_T))
    
-
+        # Wrong?
         pi_loss = 0
         if self.args.pi_lambda is not None: # pixelwise loss
           #TF = F.normalize(t_feats[5].pow(2).mean(1)) 
@@ -108,12 +109,14 @@ class Distiller(nn.Module):
           pi_loss =  self.args.pi_lambda * torch.nn.KLDivLoss()(F.log_softmax(s_out / self.temperature, dim=1), F.softmax(t_out / self.temperature, dim=1))
         
         
+        # Correct
         ic_loss = 0
         if self.args.ic_lambda is not None: #logits loss
           b, c, h, w = s_out.shape
           s_logit = torch.reshape(s_out, (b, c, h*w))
           t_logit = torch.reshape(t_out, (b, c, h*w))
 
+          # b x c x A  mul  b x A x c -> b x c x c
           ICCT = torch.bmm(t_logit, t_logit.permute(0,2,1))
           ICCT = torch.nn.functional.normalize(ICCT, dim = 2)
 
