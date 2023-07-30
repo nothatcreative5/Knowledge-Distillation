@@ -2,7 +2,7 @@ import argparse
 import os
 import numpy as np
 from tqdm import tqdm
-import wandb
+# import wandb
 
 from mypath import Path
 from dataloaders import make_data_loader
@@ -140,7 +140,7 @@ class Trainer(object):
 
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
         print('Loss: %.3f' % train_loss)
-        wandb.log({"train loss": train_loss})
+        # wandb.log({"train loss": train_loss})
 
         if self.args.no_val:
             # save checkpoint every epoch
@@ -181,7 +181,7 @@ class Trainer(object):
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
         print("Acc:{}, Acc_class:{}, mIoU:{}, fwIoU: {}".format(Acc, Acc_class, mIoU, FWIoU))
         print('Loss: %.3f' % test_loss)
-        wandb.log({"test loss": test_loss, "mIOU": mIoU})
+        # wandb.log({"test loss": test_loss, "mIOU": mIoU})
 
         new_pred = mIoU
         if new_pred > self.best_pred:
@@ -288,13 +288,13 @@ def main():
             
             
      
-    wandb.init(project="Knowledge Deistillation", entity="ipl_runs", name="feature maps",
-      config={
-      "learning_rate": 0.007,
-      "architecture": "DeepLab",
-      "dataset": "PascalVoc 2012",
-      "epochs": 120,
-      })
+    # wandb.init(project="Knowledge Deistillation", entity="ipl_runs", name="feature maps",
+    #   config={
+    #   "learning_rate": 0.007,
+    #   "architecture": "DeepLab",
+    #   "dataset": "PascalVoc 2012",
+    #   "epochs": 120,
+    #   })
     
     
     
@@ -335,7 +335,7 @@ def main():
         if not trainer.args.no_val and epoch % args.eval_interval == (args.eval_interval - 1):
             trainer.validation(epoch)
             
-    wandb.finish()
+    # wandb.finish()
 
 
 if __name__ == "__main__":
