@@ -110,7 +110,7 @@ class Distiller(nn.Module):
 
 
         conn_loss = 0
-        if self.args.conn_loss is not None: # connection loss
+        if self.args.conn_lambda is not None: # connection loss
            feat_T = F.interpolate(t_feats[3], size=t_feats[4].size()[2:], mode='bilinear', align_corners=True)
            feat_S = F.interpolate(self.Connectors[3](s_feats[3]), size=s_feats[4].size()[2:], mode='bilinear', align_corners=True)
 
@@ -120,7 +120,7 @@ class Distiller(nn.Module):
            feat_T = torch.bmm(feat_T.view(feat_T.size(0), feat_T.size(1), -1), t_feats[4].view(t_feats[4].size(0), t_feats[4].size(1), -1).permute(0, 2, 1))
            feat_S = torch.bmm(feat_S.view(feat_S.size(0), feat_S.size(1), -1), self.Connectors[4](s_feats[4]).view(s_feats[4].size(0), s_feats[4].size(1), -1).permute(0, 2, 1))
            
-           conn_loss = self.args.conn_loss * torch.nn.functional.mse_loss(feat_T, feat_S, reduction="mean")
+           conn_loss = self.args.conn_lambda * torch.nn.functional.mse_loss(feat_T, feat_S, reduction="mean")
 
 
             # for i in range(feat_num):
