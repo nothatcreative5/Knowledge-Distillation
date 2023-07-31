@@ -118,8 +118,16 @@ class Distiller(nn.Module):
 
            # B x C x HW , B x HW x C
            feat_T = torch.bmm(feat_T.view(feat_T.size(0), feat_T.size(1), -1), t_feats[4].view(t_feats[4].size(0), t_feats[4].size(1), -1).permute(0, 2, 1))
-           feat_S = torch.bmm(feat_S.view(feat_S.size(0), feat_S.size(1), -1), self.Connectors[4](s_feats[4]).view(s_feats[4].size(0), s_feats[4].size(1), -1).permute(0, 2, 1))
+
+           feat_T = torch.nn.functional.normalize(feat_T, p=2, dim=1)
            
+           feat_S = torch.nn.functional.normalize(feat_S, p=2, dim=1)
+
+
+           feat_S = torch.bmm(feat_S.view(feat_S.size(0), feat_S.size(1), -1),
+                               self.Connectors[4](s_feats[4]).view(s_feats[4].size(0), s_feats[4].size(1), -1).permute(0, 2, 1))
+           
+
            conn_loss = self.args.conn_lambda * torch.nn.functional.mse_loss(feat_T, feat_S, reduction="mean")
 
 
