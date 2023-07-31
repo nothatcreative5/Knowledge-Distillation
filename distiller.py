@@ -107,6 +107,28 @@ class Distiller(nn.Module):
           #SF = F.normalize(s_feats[5].pow(2).mean(1)) 
           #pi_loss = self.args.pi_lambda * (TF - SF).pow(2).mean()
           pi_loss =  self.args.pi_lambda * torch.nn.KLDivLoss()(F.log_softmax(s_out / self.temperature, dim=1), F.softmax(t_out / self.temperature, dim=1))
+
+
+        conn_loss = 0
+        if self.args.conn_loss is not None: # connection loss
+           feat_T = F.interpolate(t_feats[3], size=t_feats[4].size()[2:], mode='bilinear', align_corners=True)
+           feat_S = F.interpolate(self.Connectors[3](s_feats[3]), size=s_feats[4].size()[2:], mode='bilinear', align_corners=True)
+
+
+
+           # B x C x HW , B x HW x C
+           feat_T = torch.bmm(feat_T.view(feat_T.size(0), feat_T.size(1), -1), t_feats[4].view(t_feats[4].size(0), t_feats[4].size(1), -1).permute(0, 2, 1))
+           feat_S = torch.bmm(feat_S.view(feat_S.size(0), feat_S.size(1), -1), self.Connectors[4](s_feats[4]).view(s_feats[4].size(0), s_feats[4].size(1), -1).permute(0, 2, 1))
+           
+           conn_loss = self.args.conn_loss * torch.nn.functional.mse_loss(feat_T, feat_S, reduction="mean")
+
+
+            # for i in range(feat_num):
+                # s_feats[i] = self.Connectors[i](s_feats[i])
+
+                # conn_loss += self.args.conn_loss * dist_loss(s_feats[i], t_feats[i])
+                # t_feat = self.Connectors[i](t_feats[i])
+                # conn_loss += self.args.conn_loss * dist_loss(t_feat, s_feats[i])
         
         
         # Correct
@@ -148,4 +170,4 @@ class Distiller(nn.Module):
           ICCT = torch.nn.functional.normalize(ICCT, dim = 1)
           lo_loss =  self.args.lo_lambda * (ICCS - ICCT).pow(2).mean()/b 
 
-        return s_out, pa_loss, pi_loss, ic_loss, lo_loss
+        return s_out, pa_loss, pi_loss, ic_loss, lo_loss, conn_loss
