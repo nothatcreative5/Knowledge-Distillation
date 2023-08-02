@@ -132,9 +132,6 @@ class Trainer(object):
             
             ############# Comment line blow in case of ALW ################
 
-            # print(f'loss_seg: {loss_seg}, pa_loss: {pa_loss}, pi_loss: {pi_loss}, ic_loss: {ic_loss}, lo_loss: {lo_loss}, conn_loss: {conn_loss}')
-
-
             loss = loss_seg + pa_loss + pi_loss + lo_loss + conn_loss + ic_loss
             
             loss.backward()

@@ -57,6 +57,11 @@ class VOCSegmentation(Dataset):
 
         assert (len(self.images) == len(self.categories))
 
+        fraction = int(len(self.images) * 0.2)
+
+        self.images = self.images[:fraction]
+        self.categories = self.categories[:fraction]
+
         # Display stats
         print('Number of images in {}: {:d}'.format(split, len(self.images)))
 

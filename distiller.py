@@ -129,14 +129,6 @@ class Distiller(nn.Module):
            
 
            conn_loss = self.args.conn_lambda * torch.nn.functional.mse_loss(feat_T, feat_S, reduction="mean")
-
-
-            # for i in range(feat_num):
-                # s_feats[i] = self.Connectors[i](s_feats[i])
-
-                # conn_loss += self.args.conn_loss * dist_loss(s_feats[i], t_feats[i])
-                # t_feat = self.Connectors[i](t_feats[i])
-                # conn_loss += self.args.conn_loss * dist_loss(t_feat, s_feats[i])
         
         
         # Correct
