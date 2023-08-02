@@ -281,6 +281,8 @@ def main():
     
     parser.add_argument('--teacher_path', type=str, default='/kaggle/working/deeplab-resnet.pth.tar',
                         help='path to the pretrained teache')
+    
+    parser.add_argument('--fraction', type = float, default = 1.0, help = 'fraction of the dataset to use')
 
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
