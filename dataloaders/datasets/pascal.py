@@ -57,7 +57,7 @@ class VOCSegmentation(Dataset):
 
         assert (len(self.images) == len(self.categories))
 
-        # fraction = int(len(self.images) * self.args.fraction)
+        fraction = int(len(self.images) * self.args.fraction)
 
         self.images = self.images[:fraction]
         self.categories = self.categories[:fraction]
