@@ -75,7 +75,7 @@ class SAST(nn.Module):
       S = torch.softmax(S, dim = 2)
 
       # 
-      E = self.alpha * torch.einsum('bjp, bpk -> bjk', S, A_d) + x
+      E = self.alpha * torch.einsum('bjp, bpk -> bjk', S, A_d) + x.view(b, M, c)
 
       E = E.view(b, c, h, w)
         
