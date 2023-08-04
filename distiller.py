@@ -51,6 +51,9 @@ def build_feature_connector(t_channel, s_channel):
 class SAST(nn.Module):
    
    def __init__(self, t_channel, s_channel):
+      super(SAST, self).__init__()
+
+      
       self.B = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
       self.C = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
       self.D = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
