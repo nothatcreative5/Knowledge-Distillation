@@ -48,6 +48,38 @@ def build_feature_connector(t_channel, s_channel):
 
     return nn.Sequential(*C)
 
+class SAST(nn.Module):
+   
+   def __init__(self, t_channel, s_channel):
+      self.B = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
+      self.C = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
+      self.D = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
+      self.connector = nn.Conv2d(s_channel ,t_channel, kernel_size = 1)
+
+      self.alpha = 1
+
+
+   def forward(self, x):
+      b, c, h, w = x.shape
+      M = h * w
+      A_b = self.B(x).reshape(b, M, c)
+      A_c = self.C(x).reshape(b, M, c)
+      A_d = self.D(x).reshape(b, M, c)
+
+      # b x M x c * b x c x M = b x M x M
+      S = torch.bmm(A_b, A_c.permute(0,2,1))
+      # softmax along row
+      S = torch.softmax(S, dim = 2)
+
+      # 
+      E = self.alpha * torch.einsum('bjp, bpk -> bjk', S, A_d) + x
+
+      E = E.view(b, c, h, w)
+        
+      return self.connector(E).view(b, M, -1)
+
+   
+
 def get_margin_from_BN(bn):
     margin = []
     std = bn.weight.data
@@ -71,6 +103,8 @@ class Distiller(nn.Module):
         s_channels = s_net.get_channel_num()
 
         self.Connectors = nn.ModuleList([build_feature_connector(t, s) for t, s in zip(t_channels, s_channels)])
+
+        self.SAST = nn.ModuleList(SAST(t_channels[-1], s_channels[-1]))
 
         teacher_bns = t_net.get_bn_before_relu()
         margins = [get_margin_from_BN(bn) for bn in teacher_bns]
@@ -109,26 +143,33 @@ class Distiller(nn.Module):
           pi_loss =  self.args.pi_lambda * torch.nn.KLDivLoss()(F.log_softmax(s_out / self.temperature, dim=1), F.softmax(t_out / self.temperature, dim=1))
 
 
-        conn_loss = 0
-        if self.args.conn_lambda is not None: # connection loss
-           feat_T = F.interpolate(t_feats[3], size=t_feats[4].size()[2:], mode='bilinear', align_corners=True)
-           feat_S = F.interpolate(self.Connectors[3](s_feats[3]), size=s_feats[4].size()[2:], mode='bilinear', align_corners=True)
+        SA_loss = 0
+        if self.args.SA_lambda is not None: # Selt-attention loss
+           b,c,h,w = s_feats[5].shape
 
-
-
-           # B x C x HW , B x HW x C
-           feat_T = torch.bmm(feat_T.view(feat_T.size(0), feat_T.size(1), -1), t_feats[4].view(t_feats[4].size(0), t_feats[4].size(1), -1).permute(0, 2, 1))
-
-           feat_T = torch.nn.functional.normalize(feat_T, p=2, dim=1)
+           TF = t_feats[5] # b x c x h x w
+           SF = s_feats[5] # b x c x h x w
            
-           feat_S = torch.nn.functional.normalize(feat_S, p=2, dim=1)
+           M = h * w
+
+           TF = TF.view(b,M,c)
+           # b x M x c   mul  b x c x M -> b x M x M
+           X = torch.bmm(TF, TF.permute(0,2,1))
+           # softmax along row
+           X = torch.softmax(X, dim = 2) 
+
+           # b x M x c
+           G = torch.einsum('bjp, bpk -> bjk', X, TF) + TF
+
+           G = torch.nn.functional.normalize(G, dim = 2)
 
 
-           feat_S = torch.bmm(feat_S.view(feat_S.size(0), feat_S.size(1), -1),
-                               self.Connectors[4](s_feats[4]).view(s_feats[4].size(0), s_feats[4].size(1), -1).permute(0, 2, 1))
-           
+           E = torch.nn.funcitonal.normalize(self.SAST(SF), dim = 2)
 
-           conn_loss = self.args.conn_lambda * torch.nn.functional.mse_loss(feat_T, feat_S, reduction="mean")
+           SA_loss = self.args.SA_lambda * torch.nn.F.mse_loss(G, E, reduction='mean')
+
+        #    SA_loss = self.args.SA_lambda * torch.sum(G - E).pow(2).sum() / M
+
         
         
         # Correct
@@ -170,4 +211,4 @@ class Distiller(nn.Module):
           ICCT = torch.nn.functional.normalize(ICCT, dim = 1)
           lo_loss =  self.args.lo_lambda * (ICCS - ICCT).pow(2).mean()/b 
 
-        return s_out, pa_loss, pi_loss, ic_loss, lo_loss, conn_loss
+        return s_out, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss
