@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+import pickle
 import math
 from modeling.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
 import torch.utils.model_zoo as model_zoo
@@ -149,7 +150,11 @@ class MobileNetV2(nn.Module):
         return [feat1, feat2, feat3, feat4], out, low_level_feat
 
     def _load_pretrained_model(self):
-        pretrain_dict = model_zoo.load_url('http://jeff95.me/models/mobilenet_v2-6a65762b.pth')
+        # pretrain_dict = model_zoo.load_url('http://jeff95.me/models/mobilenet_v2-6a65762b.pth')
+        filename = "/kaggle/working/Knowledge-Distillation/model_A.pkl"
+        with open (filename, 'rb') as f:
+            pretrain_dict = pickle.load(f)
+            
         model_dict = {}
         state_dict = self.state_dict()
         for k, v in pretrain_dict.items():
