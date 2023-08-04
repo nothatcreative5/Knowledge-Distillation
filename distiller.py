@@ -54,9 +54,9 @@ class SAST(nn.Module):
       super(SAST, self).__init__()
 
       
-      self.B = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
-      self.C = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
-      self.D = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
+      self.B = nn.Conv2d(s_channel, s_channel, kernel_size = 1)
+      self.C = nn.Conv2d(s_channel, s_channel, kernel_size = 1)
+      self.D = nn.Conv2d(s_channel, s_channel, kernel_size = 1)
       self.connector = nn.Conv2d(s_channel ,t_channel, kernel_size = 1)
 
       self.alpha = 1
@@ -157,16 +157,15 @@ class Distiller(nn.Module):
 
            TF = TF.view(b,M,c)
            # b x M x c   mul  b x c x M -> b x M x M
-           X = torch.bmm(TF, TF.permute(0,2,1))
+           X = torch.softmax(torch.bmm(TF, TF.permute(0,2,1)), dim = 2)
            # softmax along row
-           X = torch.softmax(X, dim = 2) 
+        #    X = torch.softmax(X, dim = 2) 
 
            # b x M x c
-           G = torch.einsum('bjp, bpk -> bjk', X, TF) + TF
+           G = torch.nn.functional.normalize(torch.einsum('bjp, bpk -> bjk', X, TF) + TF, dim = 2)
 
-           G = torch.nn.functional.normalize(G, dim = 2)
-
-
+        #    G = torch.nn.functional.normalize(G, dim = 2)
+        
            E = torch.nn.functional.normalize(self.SAST(SF), dim = 2)
 
            SA_loss = self.args.SA_lambda * torch.nn.functional.mse_loss(G, E, reduction='mean')
