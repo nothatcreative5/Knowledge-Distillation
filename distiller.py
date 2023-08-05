@@ -169,7 +169,7 @@ class Distiller(nn.Module):
 
            F = torch.nn.functional.normalize(self.SAST(SF), dim = 2)
 
-           print(F.shape, G.shape, t_feats[3].shape, s_feats[3].shape)
+        #    print(F.shape, G.shape, t_feats[3].shape, s_feats[3].shape)
 
            SA_loss = self.args.SA_lambda * torch.nn.functional.mse_loss(G, F, reduction='mean')
 
