@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 import pickle
 import math
-from modeling.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
+# from modeling.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
 import torch.utils.model_zoo as model_zoo
 
 def conv_bn(inp, oup, stride, BatchNorm):
@@ -142,10 +142,14 @@ class MobileNetV2(nn.Module):
         feat4 = self.features[14:](feat3)
         out = feat4
 
-        # preReLU
-        feat1 = self.features[4].conv[0:2](feat1)
-        feat2 = self.features[7].conv[0:2](feat2)
-        feat3 = self.features[14].conv[0:2](feat3)
+        # # preReLU
+        # feat1 = self.features[4].conv[0:2](feat1)
+        # feat2 = self.features[7].conv[0:2](feat2)
+        # feat3 = self.features[14].conv[0:2](feat3)
+
+        feat1 = self.features[4].conv(feat1)
+        feat2 = self.features[7].conv(feat2)
+        feat3 = self.features[14].conv(feat3)
 
         return [feat1, feat2, feat3, feat4], out, low_level_feat
 
@@ -169,16 +173,19 @@ class MobileNetV2(nn.Module):
                 # n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 # m.weight.data.normal_(0, math.sqrt(2. / n))
                 torch.nn.init.kaiming_normal_(m.weight)
-            elif isinstance(m, SynchronizedBatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
+            # elif isinstance(m, SynchronizedBatchNorm2d):
+            #     m.weight.data.fill_(1)
+            #     m.bias.data.zero_()
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
 if __name__ == "__main__":
     input = torch.rand(1, 3, 512, 512)
-    model = MobileNetV2(output_stride=16, BatchNorm=nn.BatchNorm2d)
+    model = MobileNetV2(output_stride=16, BatchNorm=nn.BatchNorm2d, pretrained=False)
     output, low_level_feat = model(input)
     print(output.size())
     print(low_level_feat.size())
+    A, _, _ = model.extract_feature(input)
+    B = [A[j].shape for j in range(0,4)]
+    print(B)

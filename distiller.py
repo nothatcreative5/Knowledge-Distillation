@@ -107,7 +107,7 @@ class Distiller(nn.Module):
 
         self.Connectors = nn.ModuleList([build_feature_connector(t, s) for t, s in zip(t_channels, s_channels)])
 
-        self.SAST = SAST(t_channels[-1], s_channels[-1])
+        self.SAST = SAST(t_channels[3], s_channels[3])
 
         teacher_bns = t_net.get_bn_before_relu()
         margins = [get_margin_from_BN(bn) for bn in teacher_bns]
@@ -150,28 +150,24 @@ class Distiller(nn.Module):
         if self.args.SA_lambda is not None: # Selt-attention loss
            b,c,h,w = s_feats[5].shape
 
-           TF = t_feats[5] # b x c x h x w
-           SF = s_feats[5] # b x c x h x w
+           TF = t_feats[3] # b x c' x h x w
+           SF = s_feats[3] # b x c x h x w
            
            M = h * w
 
            TF = TF.view(b,M,c)
-           # b x M x c   mul  b x c x M -> b x M x M
-        #    X = torch.bmm(TF, TF.permute(0,2,1))
-           # softmax along row
-        #    X = torch.softmax(X, dim = 2) 
 
-           # b x M x c
-        #    G = torch.einsum('bjp, bpk -> bjk', X, TF) + TF
 
-        #    G = torch.nn.functional.normalize(G, dim = 2)
+           X = torch.bmm(TF, TF.permute(0,2,1))
+           X = torch.softmax(X, dim = 2) 
+
+           G = torch.einsum('bjp, bpk -> bjk', X, TF) + TF
+           G = torch.nn.functional.normalize(G, dim = 2)
 
 
            E = torch.nn.functional.normalize(self.SAST(SF), dim = 2)
 
-           SA_loss = self.args.SA_lambda * torch.nn.functional.mse_loss(TF, E, reduction='mean')
-
-        #    SA_loss = self.args.SA_lambda * torch.sum(G - E).pow(2).sum() / M
+           SA_loss = self.args.SA_lambda * torch.nn.functional.mse_loss(G, E, reduction='mean')
 
         
         

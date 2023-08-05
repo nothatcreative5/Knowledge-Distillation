@@ -1,7 +1,8 @@
 import math
+import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
-from modeling.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
+# from modeling.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
 import torch.nn.functional as F
 
 class BasicBlock(nn.Module):
@@ -206,9 +207,9 @@ class ResNet(nn.Module):
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, SynchronizedBatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
+            # elif isinstance(m, SynchronizedBatchNorm2d):
+            #     m.weight.data.fill_(1)
+            #     m.bias.data.zero_()
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
@@ -242,3 +243,15 @@ def ResNet18(output_stride, BatchNorm, pretrained=True):
     """
     model = ResNet(BasicBlock, [2, 2, 2, 2], output_stride, BatchNorm, pretrained=pretrained)
     return model
+
+
+
+if __name__ == "__main__":
+    input = torch.rand(1, 3, 512, 512)
+    model = ResNet101(output_stride=16, BatchNorm=nn.BatchNorm2d, pretrained=False)
+    output, low_level_feat = model(input)
+    print(output.size())
+    print(low_level_feat.size())
+    A, _, _ = model.extract_feature(input)
+    B = [A[j].shape for j in range(0,4)]
+    print(B)
