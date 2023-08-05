@@ -148,10 +148,14 @@ class Distiller(nn.Module):
 
         SA_loss = 0
         if self.args.SA_lambda is not None: # Selt-attention loss
-           b,c,h,w = s_feats[5].shape
+           b,c,h,w = t_feats[3].shape
 
            TF = t_feats[3] # b x c' x h x w
            SF = s_feats[3] # b x c x h x w
+
+           print(h, w)
+
+           # h and w are the same
            
            M = h * w
 
