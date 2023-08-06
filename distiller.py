@@ -173,7 +173,26 @@ class Distiller(nn.Module):
 
            SA_loss = self.args.SA_lambda * torch.nn.functional.mse_loss(G, F, reduction='mean')
 
-        
+        # I'm gonna create a bridge between 4 and 2
+        LC_loss = 0
+        if self.args.LC_lambda is not None: # Layer wise context Distillatio 
+           b,c,h,w = s_feats[3].shape
+
+           M = h * w
+
+           high_feat = s_feats[3].view(b, M, c)
+           low_feat = torch.nn.functional.normalize(s_feats[1], dim = 2)
+           low_feat = F.interpolate(low_feat, size=s_feats[3].size()[2:], mode='bilinear',
+                                     align_corners=True)
+           low_feat = torch.nn.functional.normalize(low_feat.view(b, M, -1), dim = 2)
+
+           high_feat = torch.nn.functional.normalize(high_feat, dim = 2)
+
+           high_feat = torch.bmm(high_feat, high_feat.permute(0,2,1)) / M
+           low_feat = torch.bmm(low_feat, low_feat.permute(0,2,1)) / M
+           
+           LC_loss = self.args.LC_lambda * torch.nn.functional.mse_loss(high_feat, low_feat, reduction='mean')
+           
         
         # Correct
         ic_loss = 0
@@ -214,4 +233,4 @@ class Distiller(nn.Module):
           ICCT = torch.nn.functional.normalize(ICCT, dim = 1)
           lo_loss =  self.args.lo_lambda * (ICCS - ICCT).pow(2).mean()/b 
 
-        return s_out, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss
+        return s_out, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss, LC_loss
