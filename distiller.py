@@ -182,7 +182,7 @@ class Distiller(nn.Module):
 
            high_feat = s_feats[3].view(b, M, c)
            low_feat = torch.nn.functional.normalize(s_feats[1], dim = 2)
-           low_feat = F.interpolate(low_feat, size=s_feats[3].size()[2:], mode='bilinear',
+           low_feat = torch.nn.functional.interpolate(low_feat, size=s_feats[3].size()[2:], mode='bilinear',
                                      align_corners=True)
            low_feat = torch.nn.functional.normalize(low_feat.view(b, M, -1), dim = 2)
 
