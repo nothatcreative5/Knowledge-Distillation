@@ -201,6 +201,7 @@ class Distiller(nn.Module):
 
             # Taken from paper
             for _i in [3]:
+                s_feats[_i] = self.Connectors[_i](s_feats[_i])
                 t_attention_mask = torch.mean(torch.abs(t_feats[_i]), [1], keepdim=True)
                 size = t_attention_mask.size()
                 t_attention_mask = t_attention_mask.view(s_feats[0].size(0), -1)
@@ -231,15 +232,15 @@ class Distiller(nn.Module):
                 c_sum_attention_mask = (c_t_attention_mask + c_s_attention_mask * c_s_ratio) / (1 + c_s_ratio)
                 c_sum_attention_mask = c_sum_attention_mask.detach()
 
-                AG_loss += dist2(t_feats[_i], self.Connectors[_i](s_feats[_i]), attention_mask=sum_attention_mask,
+                AG_loss += dist2(t_feats[_i], s_feats[_i], attention_mask=sum_attention_mask,
                                         channel_attention_mask=c_sum_attention_mask) * 7e-5 * 6
                 AG_loss += torch.dist(torch.mean(t_feats[_i], [2, 3]),
-                                                self.Connectors[_i](torch.mean(s_feats[_i], [2, 3]))) * 4e-3 * 6
+                                                torch.mean(s_feats[_i], [2, 3])) * 4e-3 * 6
                 t_spatial_pool = torch.mean(t_feats[_i], [1]).view(t_feats[_i].size(0), 1, t_feats[_i].size(2),
                                                                     t_feats[_i].size(3))
                 s_spatial_pool = torch.mean(s_feats[_i], [1]).view(s_feats[_i].size(0), 1, s_feats[_i].size(2),
                                                                 s_feats[_i].size(3))
-                AG_loss += torch.dist(t_spatial_pool, self.Connectors[_i](s_spatial_pool)) * 4e-3 * 6
+                AG_loss += torch.dist(t_spatial_pool, s_spatial_pool) * 4e-3 * 6
 
             AG_loss = self.args.AG_lambda * AG_loss
 
