@@ -132,9 +132,7 @@ class Trainer(object):
             
             ############# Comment line blow in case of ALW ################
 
-            loss = loss_seg + pa_loss + pi_loss + lo_loss + SA_loss + AG_loss
-
-            # print(loss_seg, SA_loss, AG_loss)
+            loss = loss_seg + pa_loss + pi_loss + lo_loss + SA_loss + AG_loss + ic_loss
             
             loss.backward()
             optimizer.step()
@@ -143,6 +141,7 @@ class Trainer(object):
 
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
         print('Loss: %.3f' % train_loss)
+        print(loss_seg, ic_loss, AG_loss)
         # wandb.log({"train loss": train_loss})
 
         if self.args.no_val:
