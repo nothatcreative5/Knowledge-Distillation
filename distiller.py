@@ -117,7 +117,7 @@ class Distiller(nn.Module):
 
         self.Connectors = nn.ModuleList([build_feature_connector(t, s) for t, s in zip(t_channels, s_channels)])
 
-        self.SAST = SAST(t_channels[5], s_channels[5])
+        self.SAST = SAST(t_channels[3], s_channels[3])
 
         teacher_bns = t_net.get_bn_before_relu()
         margins = [get_margin_from_BN(bn) for bn in teacher_bns]
@@ -158,10 +158,13 @@ class Distiller(nn.Module):
 
         SA_loss = 0
         if self.args.SA_lambda is not None: # Selt-attention loss
-           b,c,h,w = t_feats[5].shape
+           
+           layer = 3
 
-           TF = t_feats[5] # b x c' x h x w
-           SF = s_feats[5] # b x c x h x w
+           b,c,h,w = t_feats[layer].shape
+
+           TF = t_feats[layer] # b x c' x h x w
+           SF = s_feats[layer] # b x c x h x w
 
            # h and w are the same
            
