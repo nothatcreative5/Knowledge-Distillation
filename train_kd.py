@@ -134,7 +134,7 @@ class Trainer(object):
 
             loss = loss_seg + pa_loss + pi_loss + lo_loss + SA_loss + AG_loss
 
-            print(loss_seg, SA_loss, AG_loss)
+            # print(loss_seg, SA_loss, AG_loss)
             
             loss.backward()
             optimizer.step()

@@ -186,7 +186,7 @@ class Distiller(nn.Module):
 
            kl_loss = nn.KLDivLoss(reduction="batchmean")
            
-           SA_loss = self.args.SA_lambda * kl_loss(X, S) * 1e-6
+           SA_loss = self.args.SA_lambda * kl_loss(X, S) * 1e-5
 
 
 
