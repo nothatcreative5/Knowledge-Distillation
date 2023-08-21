@@ -215,7 +215,7 @@ class Distiller(nn.Module):
 
                 c_t_attention_mask = torch.mean(torch.abs(t_feats[_i]), [2, 3], keepdim=True)  # 2 x 256 x 1 x1
                 c_size = c_t_attention_mask.size()
-                c_t_attention_mask = c_t_attention_mask.view(x[0].size(0), -1)  # 2 x 256
+                c_t_attention_mask = c_t_attention_mask.view(s_feats[_i].size(0), -1)  # 2 x 256
                 c_t_attention_mask = torch.softmax(c_t_attention_mask / c_t, dim=1) * 256
                 c_t_attention_mask = c_t_attention_mask.view(c_size)  # 2 x 256 -> 2 x 256 x 1 x 1
 
