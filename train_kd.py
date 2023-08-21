@@ -123,7 +123,7 @@ class Trainer(object):
             self.scheduler(optimizer, i, epoch, self.best_pred)
             optimizer.zero_grad()
             
-            output, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss, LC_loss = self.d_net(image)
+            output, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss, AG_loss = self.d_net(image)
             loss_seg = self.criterion(output, target)
             
             ########### uncomment lines below for ALW ##################
@@ -132,11 +132,9 @@ class Trainer(object):
             
             ############# Comment line blow in case of ALW ################
 
-            loss = loss_seg + pa_loss + pi_loss + lo_loss + SA_loss + ic_loss + LC_loss
+            loss = loss_seg + pa_loss + pi_loss + lo_loss + SA_loss + ic_loss, AG_loss
 
-            # print(loss_seg, SA_loss, LC_loss)
-
-            # print(loss_seg, SA_loss)
+            print(loss_seg, SA_loss, AG_loss)
             
             loss.backward()
             optimizer.step()
@@ -283,8 +281,8 @@ def main():
     parser.add_argument('--SA_lambda', type=float, default=None,
                         help='coefficient for Self-attention loss')
     
-    parser.add_argument('--LC_lambda', type = float , default = None, 
-                        help = 'coefficient for layer-wise loss')
+    parser.add_argument('--AG_lambda', type = float, default = None, 
+                        help = 'coefficient for Attention Guided loss')
     
     parser.add_argument('--teacher_path', type=str, default='/kaggle/working/deeplab-resnet.pth.tar',
                         help='path to the pretrained teache')

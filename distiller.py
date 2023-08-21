@@ -56,8 +56,8 @@ class SAST(nn.Module):
       
       self.B = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
       self.C = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
-      self.D = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
-      self.connector = nn.Conv2d(s_channel ,t_channel, kernel_size = 1)
+    #   self.D = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
+    #   self.connector = nn.Conv2d(s_channel ,t_channel, kernel_size = 1)
 
       self.alpha = 1
 
@@ -67,19 +67,29 @@ class SAST(nn.Module):
       M = h * w
       A_b = self.B(x).reshape(b, M, c)
       A_c = self.C(x).reshape(b, M, c)
-      A_d = self.D(x).reshape(b, M, c)
+    #   A_d = self.D(x).reshape(b, M, c)
 
       # b x M x c * b x c x M = b x M x M
       S = torch.bmm(A_b, A_c.permute(0,2,1))
-      # softmax along row
+
+      identity_mask = torch.eye(M, dtype=S.dtype, device=S.device).unsqueeze(0).expand(b, -1, -1)
+
+      S = S * (1 - identity_mask)
+
+
       S = torch.softmax(S, dim = 2)
-
-      # 
-      E = self.alpha * torch.einsum('bjp, bpk -> bjk', S, A_d) + x.view(b, M, c)
-
-      E = E.view(b, c, h, w)
         
-      return self.connector(E).view(b, M, -1)
+      return S
+   
+
+def dist2(tensor_a, tensor_b, attention_mask=None, channel_attention_mask=None):
+    diff = (tensor_a - tensor_b) ** 2
+    #   print(diff.size())      batchsize x 1 x W x H,
+    #   print(attention_mask.size()) batchsize x 1 x W x H
+    diff = diff * attention_mask
+    diff = diff * channel_attention_mask
+    diff = torch.sum(diff) ** 0.5
+    return diff
 
    
 
@@ -107,7 +117,7 @@ class Distiller(nn.Module):
 
         self.Connectors = nn.ModuleList([build_feature_connector(t, s) for t, s in zip(t_channels, s_channels)])
 
-        self.SAST = SAST(t_channels[3], s_channels[3])
+        self.SAST = SAST(t_channels[5], s_channels[5])
 
         teacher_bns = t_net.get_bn_before_relu()
         margins = [get_margin_from_BN(bn) for bn in teacher_bns]
@@ -148,10 +158,10 @@ class Distiller(nn.Module):
 
         SA_loss = 0
         if self.args.SA_lambda is not None: # Selt-attention loss
-           b,c,h,w = t_feats[3].shape
+           b,c,h,w = t_feats[5].shape
 
-           TF = t_feats[3] # b x c' x h x w
-           SF = s_feats[3] # b x c x h x w
+           TF = t_feats[5] # b x c' x h x w
+           SF = s_feats[5] # b x c x h x w
 
            # h and w are the same
            
@@ -159,57 +169,94 @@ class Distiller(nn.Module):
 
            TF = TF.view(b,M,c)
 
-
+           # b x M x M
            X = torch.bmm(TF, TF.permute(0,2,1))
-           X = torch.softmax(X, dim = 2) 
 
-           G = torch.einsum('bjp, bpk -> bjk', X, TF) + TF
-           G = torch.nn.functional.normalize(G, dim = 2)
-
-
-           F = torch.nn.functional.normalize(self.SAST(SF), dim = 2)
-
-        #    print(F.shape, G.shape, t_feats[3].shape, s_feats[3].shape)
-
-           SA_loss = self.args.SA_lambda * torch.nn.functional.mse_loss(G, F, reduction='mean')
-
-        # I'm gonna create a bridge between 4 and 2
-        LC_loss = 0
-        if self.args.LC_lambda is not None: # Layer wise context Distillatio 
-           b,c,h,w = s_feats[3].shape
-
-           M = h * w
-
-           high_feat = s_feats[3].view(b, M, c)
-           low_feat = torch.nn.functional.normalize(s_feats[1], dim = 2)
-           low_feat = torch.nn.functional.interpolate(low_feat, size=s_feats[3].size()[2:], mode='bilinear',
-                                     align_corners=True)
-           low_feat = torch.nn.functional.normalize(low_feat.view(b, M, -1), dim = 2)
-
-           high_feat = torch.nn.functional.normalize(high_feat, dim = 2)
-
-           high_feat = torch.bmm(high_feat, high_feat.permute(0,2,1)) / M
-           low_feat = torch.bmm(low_feat, low_feat.permute(0,2,1)) / M
+           identity_mask = torch.eye(M, dtype=X.dtype, device=X.device).unsqueeze(0).expand(b, -1, -1)
            
-           LC_loss = self.args.LC_lambda * torch.nn.functional.mse_loss(high_feat, low_feat, reduction='mean')
+           X = X * (1 - identity_mask)
+
+           X = F.log_softmax(X, dim = 2) 
            
-        
+           # b x M x M
+           S = self.SAST(SF)
+
+           kl_loss = nn.KLDivLoss(reduction="batchmean")
+           
+           SA_loss = self.args.SA_lambda * kl_loss(X, S)
+
+
+
+        AG_loss = 0
+        if self.args.AG_lambda is not None:
+            t = 0.1
+            s_ratio = 1.0
+
+            #   for channel attention
+            c_t = 0.1
+            c_s_ratio = 1.0
+
+            # Taken from paper
+            for _i in [3]:
+                t_attention_mask = torch.mean(torch.abs(t_feats[_i]), [1], keepdim=True)
+                size = t_attention_mask.size()
+                t_attention_mask = t_attention_mask.view(s_feats[0].size(0), -1)
+                t_attention_mask = torch.softmax(t_attention_mask / t, dim=1) * size[-1] * size[-2]
+                t_attention_mask = t_attention_mask.view(size)
+
+                s_attention_mask = torch.mean(torch.abs(s_feats[_i]), [1], keepdim=True)
+                size = s_attention_mask.size()
+                s_attention_mask = s_attention_mask.view(s_feats[0].size(0), -1)
+                s_attention_mask = torch.softmax(s_attention_mask / t, dim=1) * size[-1] * size[-2]
+                s_attention_mask = s_attention_mask.view(size)
+
+                c_t_attention_mask = torch.mean(torch.abs(t_feats[_i]), [2, 3], keepdim=True)  # 2 x 256 x 1 x1
+                c_size = c_t_attention_mask.size()
+                c_t_attention_mask = c_t_attention_mask.view(x[0].size(0), -1)  # 2 x 256
+                c_t_attention_mask = torch.softmax(c_t_attention_mask / c_t, dim=1) * 256
+                c_t_attention_mask = c_t_attention_mask.view(c_size)  # 2 x 256 -> 2 x 256 x 1 x 1
+
+                c_s_attention_mask = torch.mean(torch.abs(s_feats[_i]), [2, 3], keepdim=True)  # 2 x 256 x 1 x1
+                c_size = c_s_attention_mask.size()
+                c_s_attention_mask = c_s_attention_mask.view(s_feats[0].size(0), -1)  # 2 x 256
+                c_s_attention_mask = torch.softmax(c_s_attention_mask / c_t, dim=1) * 256
+                c_s_attention_mask = c_s_attention_mask.view(c_size)  # 2 x 256 -> 2 x 256 x 1 x 1
+
+                sum_attention_mask = (t_attention_mask + s_attention_mask * s_ratio) / (1 + s_ratio)
+                sum_attention_mask = sum_attention_mask.detach()
+
+                c_sum_attention_mask = (c_t_attention_mask + c_s_attention_mask * c_s_ratio) / (1 + c_s_ratio)
+                c_sum_attention_mask = c_sum_attention_mask.detach()
+
+                AG_loss += dist2(t_feats[_i], self.Connectors[_i](s_feats[_i]), attention_mask=sum_attention_mask,
+                                        channel_attention_mask=c_sum_attention_mask) * 7e-5 * 6
+                AG_loss += torch.dist(torch.mean(t_feats[_i], [2, 3]),
+                                                self.Connectors[_i](torch.mean(s_feats[_i], [2, 3]))) * 4e-3 * 6
+                t_spatial_pool = torch.mean(t_feats[_i], [1]).view(t_feats[_i].size(0), 1, t_feats[_i].size(2),
+                                                                    t_feats[_i].size(3))
+                s_spatial_pool = torch.mean(s_feats[_i], [1]).view(s_feats[_i].size(0), 1, s_feats[_i].size(2),
+                                                                s_feats[_i].size(3))
+                AG_loss += torch.dist(t_spatial_pool, self.Connectors[_i](s_spatial_pool)) * 4e-3 * 6
+
+            AG_loss = self.args.AG_lambda * AG_loss
+
+
         # Correct
         ic_loss = 0
         if self.args.ic_lambda is not None: #logits loss
-          b, c, h, w = s_out.shape
-          s_logit = torch.reshape(s_out, (b, c, h*w))
-          t_logit = torch.reshape(t_out, (b, c, h*w))
+            b, c, h, w = s_out.shape
+            s_logit = torch.reshape(s_out, (b, c, h*w))
+            t_logit = torch.reshape(t_out, (b, c, h*w))
 
-          # b x c x A  mul  b x A x c -> b x c x c
-          ICCT = torch.bmm(t_logit, t_logit.permute(0,2,1))
-          ICCT = torch.nn.functional.normalize(ICCT, dim = 2)
+            # b x c x A  mul  b x A x c -> b x c x c
+            ICCT = torch.bmm(t_logit, t_logit.permute(0,2,1))
+            ICCT = torch.nn.functional.normalize(ICCT, dim = 2)
 
-          ICCS = torch.bmm(s_logit, s_logit.permute(0,2,1))
-          ICCS = torch.nn.functional.normalize(ICCS, dim = 2)
+            ICCS = torch.bmm(s_logit, s_logit.permute(0,2,1))
+            ICCS = torch.nn.functional.normalize(ICCS, dim = 2)
 
-          G_diff = ICCS - ICCT
-          ic_loss = self.args.ic_lambda * (G_diff * G_diff).view(b, -1).sum() / (c*b)
+            G_diff = ICCS - ICCT
+            ic_loss = self.args.ic_lambda * (G_diff * G_diff).view(b, -1).sum() / (c*b)
         
         
         
@@ -233,4 +280,4 @@ class Distiller(nn.Module):
           ICCT = torch.nn.functional.normalize(ICCT, dim = 1)
           lo_loss =  self.args.lo_lambda * (ICCS - ICCT).pow(2).mean()/b 
 
-        return s_out, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss, LC_loss
+        return s_out, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss, AG_loss
