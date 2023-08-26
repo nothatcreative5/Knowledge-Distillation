@@ -34,7 +34,7 @@ class DeepLab(nn.Module):
 
     def forward(self, input):
         x, low_level_feat = self.backbone(input)
-        if self.backbone != 'resnet101':
+        if hasattr(self, 'encoder'):
             x = self.encoder(x)
         x = self.aspp(x)
         x = self.decoder(x, low_level_feat)
@@ -85,7 +85,7 @@ class DeepLab(nn.Module):
 
     def extract_feature(self, input):
         feats, x, low_level_feat = self.backbone.extract_feature(input)
-        if self.backbone != 'resnet101':
+        if hasattr(self, 'encoder'):
             x = self.encoder(x)
             feats += [x]
         feat, x = self.aspp.extract_feature(x)
