@@ -70,7 +70,7 @@ class SAST(nn.Module):
     #   A_d = self.D(x).reshape(b, M, c)
 
       # b x M x c * b x c x M = b x M x M
-      S = torch.bmm(A_b, A_c.permute(0,2,1)) / (torch.sqrt(torch.Tensor([M])))
+      S = torch.bmm(A_b, A_c.permute(0,2,1)) / np.sqrt(M)
 
       identity_mask = torch.eye(M, dtype=S.dtype, device=S.device).unsqueeze(0).expand(b, -1, -1)
 
@@ -172,7 +172,7 @@ class Distiller(nn.Module):
            TF = TF.view(b,M,c)
 
            # b x M x M
-           X = torch.bmm(TF, TF.permute(0,2,1)) / (torch.sqrt(torch.Tensor([M])))
+           X = torch.bmm(TF, TF.permute(0,2,1)) / np.sqrt(M)
 
            identity_mask = torch.eye(M, dtype=X.dtype, device=X.device).unsqueeze(0).expand(b, -1, -1)
            
