@@ -76,6 +76,33 @@ def get_margin_from_BN(bn):
     return torch.FloatTensor(margin).to(std.device)
 
 
+
+class SAST(nn.Module):
+    def __init__(self, s_channel):
+        self.B = nn.Conv2d(s_channel, s_channel, kernel_size=1)
+        self.C = nn.Conv2d(s_channel, s_channel, kernel_size=1)
+        self.D = nn.Conv2d(s_channel, s_channel, kernel_size=1)
+
+    def forward(self, f_S):
+        b,c,h,w = f_S.shape
+
+        M = h * w
+
+        b = self.B(f_S).view(b,M,c)
+        c = self.C(f_S).view(b,c,M)
+        d = self.D(f_S)
+
+        S = torch.bmm(b,c) / np.sqrt(M)
+
+        S = F.softmax(S, dim = 2)
+
+        E = torch.einsum('bji, bik -> bjk', S, d).view(b, h, w, c) + d.view(b, h, w, c)
+        E = E.view(b, c, h, w)
+
+        return E
+
+    
+
 class Distiller(nn.Module):
     def __init__(self, t_net, s_net, args):
         super(Distiller, self).__init__()
@@ -84,6 +111,8 @@ class Distiller(nn.Module):
         s_channels = s_net.get_channel_num()
 
         self.Connectors = nn.ModuleList([build_feature_connector(t, s) for t, s in zip(t_channels, s_channels)])
+
+        self.SAST = SAST(t_channels[3], s_channels[3])
 
         teacher_bns = t_net.get_bn_before_relu()
         margins = [get_margin_from_BN(bn) for bn in teacher_bns]
@@ -147,8 +176,7 @@ class Distiller(nn.Module):
 
            G = G.view(b, c, h, w)
 
-           F_t = self.Connectors[3](s_feats[4])
-           
+           F_t = self.Connectors[3](self.SAST(s_feats[layer]))
            
            SA_loss = (G - F_t) ** 2
            SA_loss = SA_loss.sum() ** 0.5 / b

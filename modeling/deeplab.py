@@ -10,6 +10,7 @@ import numpy as  np
 import cv2
 import torch
 
+
 class DeepLab(nn.Module):
     def __init__(self, backbone='resnet', output_stride=16, num_classes=21,
                  sync_bn=True, freeze_bn=False):
@@ -23,9 +24,6 @@ class DeepLab(nn.Module):
             BatchNorm = nn.BatchNorm2d
 
         self.backbone = build_backbone(backbone, output_stride, BatchNorm)
-        if backbone != 'resnet101':
-            self.encoder = nn.TransformerEncoder(
-                encoder_layer = nn.TransformerEncoderLayer(d_model=33 * 33, nhead=9), num_layers=1)
         self.aspp = build_aspp(backbone, output_stride, BatchNorm)
         self.decoder = build_decoder(num_classes, backbone, BatchNorm)
 
@@ -34,11 +32,6 @@ class DeepLab(nn.Module):
 
     def forward(self, input):
         x, low_level_feat = self.backbone(input)
-        if hasattr(self, 'encoder'):
-            b, c, h, w = x.shape
-            x = x.view(b, c, h * w)
-            x = self.encoder(x)
-            x = x.view(b, c, h, w)
         x = self.aspp(x)
         x = self.decoder(x, low_level_feat)
         x = F.interpolate(x, size=input.size()[2:], mode='bilinear', align_corners=True)
@@ -88,12 +81,6 @@ class DeepLab(nn.Module):
 
     def extract_feature(self, input):
         feats, x, low_level_feat = self.backbone.extract_feature(input)
-        if hasattr(self, 'encoder'):
-            b, c, h, w = x.shape
-            x = x.view(b, c, h * w)
-            x = self.encoder(x)
-            x = x.view(b, c, h, w)
-            feats += [x]
         feat, x = self.aspp.extract_feature(x)
         feats += feat
         feat, x = self.decoder.extract_feature(x, low_level_feat)
