@@ -112,7 +112,7 @@ class Distiller(nn.Module):
 
         self.Connectors = nn.ModuleList([build_feature_connector(t, s) for t, s in zip(t_channels, s_channels)])
 
-        self.SAST = SAST(t_channels[3], s_channels[3])
+        self.SAST = SAST(s_channels[3])
 
         teacher_bns = t_net.get_bn_before_relu()
         margins = [get_margin_from_BN(bn) for bn in teacher_bns]
