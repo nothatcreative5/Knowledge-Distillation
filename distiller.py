@@ -48,38 +48,7 @@ def build_feature_connector(t_channel, s_channel):
 
     return nn.Sequential(*C)
 
-class SAST(nn.Module):
-   
-   def __init__(self, t_channel, s_channel):
-      super(SAST, self).__init__()
 
-      
-      self.B = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
-      self.C = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
-    #   self.D = nn.Conv2d(s_channel, s_channel, kernel_size = 3, padding = 1)
-    #   self.connector = nn.Conv2d(s_channel ,t_channel, kernel_size = 1)
-
-      self.alpha = 1
-
-
-   def forward(self, x):
-      b, c, h, w = x.shape
-      M = h * w
-      A_b = self.B(x).reshape(b, M, c)
-      A_c = self.C(x).reshape(b, M, c)
-    #   A_d = self.D(x).reshape(b, M, c)
-
-      # b x M x c * b x c x M = b x M x M
-      S = torch.bmm(A_b, A_c.permute(0,2,1)) / np.sqrt(M)
-
-      identity_mask = torch.eye(M, dtype=S.dtype, device=S.device).unsqueeze(0).expand(b, -1, -1)
-
-      S = S * (1 - identity_mask)
-
-
-      S = torch.softmax(S, dim = 2)
-        
-      return S
    
 
 def dist2(tensor_a, tensor_b, attention_mask=None, channel_attention_mask=None):
@@ -115,8 +84,6 @@ class Distiller(nn.Module):
         s_channels = s_net.get_channel_num()
 
         self.Connectors = nn.ModuleList([build_feature_connector(t, s) for t, s in zip(t_channels, s_channels)])
-
-        self.SAST = SAST(t_channels[3], s_channels[3])
 
         teacher_bns = t_net.get_bn_before_relu()
         margins = [get_margin_from_BN(bn) for bn in teacher_bns]
@@ -163,7 +130,6 @@ class Distiller(nn.Module):
            b,c,h,w = t_feats[layer].shape
 
            TF = t_feats[layer] # b x c' x h x w
-           SF = s_feats[layer] # b x c x h x w
 
            # h and w are the same
            
@@ -174,22 +140,20 @@ class Distiller(nn.Module):
            # b x M x M
            X = torch.bmm(TF, TF.permute(0,2,1)) / np.sqrt(M)
 
-           identity_mask = torch.eye(M, dtype=X.dtype, device=X.device).unsqueeze(0).expand(b, -1, -1)
-           
-           X = X * (1 - identity_mask)
+           X = F.softmax(X, dim = 2) 
 
-           X = F.log_softmax(X, dim = 2) 
-           
-           # b x M x M
-           S = self.SAST(SF)
+           # b x M x N^T
+           G = torch.einsum('ji, ik -> jk', X, TF).view(b, h, w, c) + TF.view(b, h, w, c)
 
-           SA_loss = (X - S) ** 2
-           SA_loss = SA_loss.sum() ** 0.5
-           SA_loss = SA_loss / (b * M * M)
-  
+           G = G.view(b, c, h, w)
+
+           F_t = self.Connectors[3](s_feats[4])
+           
+           
+           SA_loss = (G - F_t) ** 2
+           SA_loss = SA_loss.sum() ** 0.5 / b
+
            SA_loss = self.args.SA_lambda * SA_loss
-
-
 
         # Correct
         ic_loss = 0

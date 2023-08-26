@@ -23,6 +23,9 @@ class DeepLab(nn.Module):
             BatchNorm = nn.BatchNorm2d
 
         self.backbone = build_backbone(backbone, output_stride, BatchNorm)
+        if backbone != 'resnet101':
+            self.encoder = nn.TransformerEncoder(
+                encoder_layer = nn.TransformerEncoderLayer(d_model=32 * 32, nhead=8), num_layers=1)
         self.aspp = build_aspp(backbone, output_stride, BatchNorm)
         self.decoder = build_decoder(num_classes, backbone, BatchNorm)
 
@@ -31,6 +34,8 @@ class DeepLab(nn.Module):
 
     def forward(self, input):
         x, low_level_feat = self.backbone(input)
+        if self.backbone != 'resnet101':
+            x = self.encoder(x)
         x = self.aspp(x)
         x = self.decoder(x, low_level_feat)
         x = F.interpolate(x, size=input.size()[2:], mode='bilinear', align_corners=True)
@@ -80,6 +85,9 @@ class DeepLab(nn.Module):
 
     def extract_feature(self, input):
         feats, x, low_level_feat = self.backbone.extract_feature(input)
+        if self.backbone != 'resnet101':
+            x = self.encoder(x)
+            feats += [x]
         feat, x = self.aspp.extract_feature(x)
         feats += feat
         feat, x = self.decoder.extract_feature(x, low_level_feat)
