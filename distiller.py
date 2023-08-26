@@ -143,7 +143,7 @@ class Distiller(nn.Module):
            X = F.softmax(X, dim = 2) 
 
            # b x M x N^T
-           G = torch.einsum('ji, ik -> jk', X, TF).view(b, h, w, c) + TF.view(b, h, w, c)
+           G = torch.einsum('bji, bik -> bjk', X, TF).view(b, h, w, c) + TF.view(b, h, w, c)
 
            G = G.view(b, c, h, w)
 
