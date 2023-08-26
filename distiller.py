@@ -86,20 +86,20 @@ class SAST(nn.Module):
         self.D = nn.Conv2d(s_channel, s_channel, kernel_size=1)
 
     def forward(self, f_S):
-        batch,c,h,w = f_S.shape
+        b,c,h,w = f_S.shape
 
         M = h * w
 
-        b = self.B(f_S).view(batch,M,c)
-        c = self.C(f_S).view(batch,c,M)
-        d = self.D(f_S).view(batch,M,c)
+        B = self.B(f_S).view(b,M,c)
+        C = self.C(f_S).view(b,c,M)
+        D = self.D(f_S).view(b,M,c)
 
-        S = torch.bmm(b,c) / np.sqrt(M)
+        S = torch.bmm(B,C) / np.sqrt(M)
 
         S = F.softmax(S, dim = 2)
 
-        E = torch.einsum('bji, bik -> bjk', S, d).view(batch, h, w, c) + d.view(batch, h, w, c)
-        E = E.view(batch, c, h, w)
+        E = torch.einsum('bji, bik -> bjk', S, D).view(b, h, w, c) + D.view(b, h, w, c)
+        E = E.view(b, c, h, w)
 
         return E
 
