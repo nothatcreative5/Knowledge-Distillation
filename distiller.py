@@ -70,7 +70,7 @@ class SAST(nn.Module):
     #   A_d = self.D(x).reshape(b, M, c)
 
       # b x M x c * b x c x M = b x M x M
-      S = torch.bmm(A_b, A_c.permute(0,2,1))
+      S = torch.bmm(A_b, A_c.permute(0,2,1)) / (torch.sqrt(torch.Tensor([M])))
 
       identity_mask = torch.eye(M, dtype=S.dtype, device=S.device).unsqueeze(0).expand(b, -1, -1)
 
@@ -92,7 +92,6 @@ def dist2(tensor_a, tensor_b, attention_mask=None, channel_attention_mask=None):
     return diff
 
    
-
 def get_margin_from_BN(bn):
     margin = []
     std = bn.weight.data
@@ -173,7 +172,7 @@ class Distiller(nn.Module):
            TF = TF.view(b,M,c)
 
            # b x M x M
-           X = torch.bmm(TF, TF.permute(0,2,1))
+           X = torch.bmm(TF, TF.permute(0,2,1)) / (torch.sqrt(torch.Tensor([M])))
 
            identity_mask = torch.eye(M, dtype=X.dtype, device=X.device).unsqueeze(0).expand(b, -1, -1)
            
@@ -184,65 +183,12 @@ class Distiller(nn.Module):
            # b x M x M
            S = self.SAST(SF)
 
-           kl_loss = nn.KLDivLoss(reduction="batchmean")
-           
-           SA_loss = self.args.SA_lambda * kl_loss(X, S) * 1e-5
+           SA_loss = (X - S) ** 2
+           SA_loss = SA_loss.sum() ** 0.5
+           SA_loss = SA_loss / (b * M * M)
+  
+           SA_loss = self.args.SA_lambda * SA_loss
 
-
-
-        AG_loss = 0
-        if self.args.AG_lambda is not None:
-            t = 0.1
-            s_ratio = 1.0
-
-            #   for channel attention
-            c_t = 0.1
-            c_s_ratio = 1.0
-
-            # Taken from paper
-            for _i in [3]:
-                s_feats[_i] = self.Connectors[_i](s_feats[_i])
-                t_attention_mask = torch.mean(torch.abs(t_feats[_i]), [1], keepdim=True)
-                size = t_attention_mask.size()
-                t_attention_mask = t_attention_mask.view(s_feats[0].size(0), -1)
-                t_attention_mask = torch.softmax(t_attention_mask / t, dim=1) * size[-1] * size[-2]
-                t_attention_mask = t_attention_mask.view(size)
-
-                s_attention_mask = torch.mean(torch.abs(s_feats[_i]), [1], keepdim=True)
-                size = s_attention_mask.size()
-                s_attention_mask = s_attention_mask.view(s_feats[0].size(0), -1)
-                s_attention_mask = torch.softmax(s_attention_mask / t, dim=1) * size[-1] * size[-2]
-                s_attention_mask = s_attention_mask.view(size)
-
-                c_t_attention_mask = torch.mean(torch.abs(t_feats[_i]), [2, 3], keepdim=True)  # 2 x 256 x 1 x1
-                c_size = c_t_attention_mask.size()
-                c_t_attention_mask = c_t_attention_mask.view(s_feats[_i].size(0), -1)  # 2 x 256
-                c_t_attention_mask = torch.softmax(c_t_attention_mask / c_t, dim=1) * 256
-                c_t_attention_mask = c_t_attention_mask.view(c_size)  # 2 x 256 -> 2 x 256 x 1 x 1
-
-                c_s_attention_mask = torch.mean(torch.abs(s_feats[_i]), [2, 3], keepdim=True)  # 2 x 256 x 1 x1
-                c_size = c_s_attention_mask.size()
-                c_s_attention_mask = c_s_attention_mask.view(s_feats[0].size(0), -1)  # 2 x 256
-                c_s_attention_mask = torch.softmax(c_s_attention_mask / c_t, dim=1) * 256
-                c_s_attention_mask = c_s_attention_mask.view(c_size)  # 2 x 256 -> 2 x 256 x 1 x 1
-
-                sum_attention_mask = (t_attention_mask + s_attention_mask * s_ratio) / (1 + s_ratio)
-                sum_attention_mask = sum_attention_mask.detach()
-
-                c_sum_attention_mask = (c_t_attention_mask + c_s_attention_mask * c_s_ratio) / (1 + c_s_ratio)
-                c_sum_attention_mask = c_sum_attention_mask.detach()
-
-                AG_loss += dist2(t_feats[_i], s_feats[_i], attention_mask=sum_attention_mask,
-                                        channel_attention_mask=c_sum_attention_mask) * 7e-5 * 6
-                AG_loss += torch.dist(torch.mean(t_feats[_i], [2, 3]),
-                                                torch.mean(s_feats[_i], [2, 3])) * 4e-3 * 6
-                t_spatial_pool = torch.mean(t_feats[_i], [1]).view(t_feats[_i].size(0), 1, t_feats[_i].size(2),
-                                                                    t_feats[_i].size(3))
-                s_spatial_pool = torch.mean(s_feats[_i], [1]).view(s_feats[_i].size(0), 1, s_feats[_i].size(2),
-                                                                s_feats[_i].size(3))
-                AG_loss += torch.dist(t_spatial_pool, s_spatial_pool) * 4e-3 * 6
-
-            AG_loss = self.args.AG_lambda * AG_loss
 
 
         # Correct

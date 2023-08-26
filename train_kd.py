@@ -61,9 +61,11 @@ class Trainer(object):
 
         distill_params = [{'params': self.s_net.get_1x_lr_params(), 'lr': args.lr},
                           {'params': self.s_net.get_10x_lr_params(), 'lr': args.lr * 10},
-                          {'params': self.d_net.Connectors.parameters(), 'lr': args.lr * 10}]
+                          {'params': self.d_net.Connectors.parameters(), 'lr': args.lr * 10},
+                          {'params': self.d_net.SAST.parameters(), 'lr': args.lr * 10}]
 
-        init_params = [{'params': self.d_net.Connectors.parameters(), 'lr': args.lr * 10}]
+        init_params = [{'params': self.d_net.Connectors.parameters(), 'lr': args.lr * 10},
+                       {'params': self.d_net.SAST.parameters(), 'lr': args.lr * 10}]
 
         # # Define Optimizer
         self.optimizer = torch.optim.SGD(distill_params, momentum=args.momentum,
@@ -141,7 +143,7 @@ class Trainer(object):
 
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
         print('Loss: %.3f' % train_loss)
-        print(loss_seg, ic_loss, AG_loss)
+        print(loss_seg, SA_loss)
         # wandb.log({"train loss": train_loss})
 
         if self.args.no_val:
