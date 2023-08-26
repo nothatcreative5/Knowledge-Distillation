@@ -35,7 +35,10 @@ class DeepLab(nn.Module):
     def forward(self, input):
         x, low_level_feat = self.backbone(input)
         if hasattr(self, 'encoder'):
+            b, c, h, w = x.shape
+            x = x.view(b, c, h * w)
             x = self.encoder(x)
+            x = x.view(b, c, h, w)
         x = self.aspp(x)
         x = self.decoder(x, low_level_feat)
         x = F.interpolate(x, size=input.size()[2:], mode='bilinear', align_corners=True)
@@ -86,7 +89,10 @@ class DeepLab(nn.Module):
     def extract_feature(self, input):
         feats, x, low_level_feat = self.backbone.extract_feature(input)
         if hasattr(self, 'encoder'):
+            b, c, h, w = x.shape
+            x = x.view(b, c, h * w)
             x = self.encoder(x)
+            x = x.view(b, c, h, w)
             feats += [x]
         feat, x = self.aspp.extract_feature(x)
         feats += feat
