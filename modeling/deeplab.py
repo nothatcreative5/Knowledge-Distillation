@@ -25,7 +25,7 @@ class DeepLab(nn.Module):
         self.backbone = build_backbone(backbone, output_stride, BatchNorm)
         if backbone != 'resnet101':
             self.encoder = nn.TransformerEncoder(
-                encoder_layer = nn.TransformerEncoderLayer(d_model=32 * 32, nhead=8), num_layers=1)
+                encoder_layer = nn.TransformerEncoderLayer(d_model=33 * 33, nhead=8), num_layers=1)
         self.aspp = build_aspp(backbone, output_stride, BatchNorm)
         self.decoder = build_decoder(num_classes, backbone, BatchNorm)
 
