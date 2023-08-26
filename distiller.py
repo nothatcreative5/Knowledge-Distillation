@@ -79,6 +79,8 @@ def get_margin_from_BN(bn):
 
 class SAST(nn.Module):
     def __init__(self, s_channel):
+        super(SAST, self).__init__()
+
         self.B = nn.Conv2d(s_channel, s_channel, kernel_size=1)
         self.C = nn.Conv2d(s_channel, s_channel, kernel_size=1)
         self.D = nn.Conv2d(s_channel, s_channel, kernel_size=1)
