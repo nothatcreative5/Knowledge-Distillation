@@ -92,7 +92,7 @@ class SAST(nn.Module):
 
         b = self.B(f_S).view(batch,M,c)
         c = self.C(f_S).view(batch,c,M)
-        d = self.D(f_S)
+        d = self.D(f_S).view(batch,M,c)
 
         S = torch.bmm(b,c) / np.sqrt(M)
 
