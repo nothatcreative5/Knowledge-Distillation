@@ -147,10 +147,6 @@ class MobileNetV2(nn.Module):
         # feat2 = self.features[7].conv[0:2](feat2)
         # feat3 = self.features[14].conv[0:2](feat3)
 
-        feat1 = self.features[4].conv(feat1)
-        feat2 = self.features[7].conv(feat2)
-        feat3 = self.features[14].conv(feat3)
-
         return [feat1, feat2, feat3, feat4], out, low_level_feat
 
     def _load_pretrained_model(self):

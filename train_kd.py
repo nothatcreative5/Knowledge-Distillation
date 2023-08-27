@@ -111,6 +111,8 @@ class Trainer(object):
         self.d_net.module.s_net.train()
         tbar = tqdm(self.train_loader)
         num_img_tr = len(self.train_loader)
+        SA_avg = 0
+        seg_avg = 0
 
         if epoch == 0:
             optimizer = self.init_optimizer
@@ -135,6 +137,8 @@ class Trainer(object):
             ############# Comment line blow in case of ALW ################
 
             loss = loss_seg + pa_loss + pi_loss + lo_loss + SA_loss + ic_loss
+            SA_avg += SA_loss.item()
+            seg_avg += loss_seg.item()
             
             loss.backward()
             optimizer.step()
@@ -143,7 +147,7 @@ class Trainer(object):
 
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
         print('Loss: %.3f' % train_loss)
-        print(loss_seg, SA_loss)
+        print(seg_avg / len(tbar), SA_avg / len(tbar))
         # wandb.log({"train loss": train_loss})
 
         if self.args.no_val:
