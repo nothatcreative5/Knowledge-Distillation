@@ -163,8 +163,7 @@ class Trainer(object):
         test_loss = 0.0
         for i, sample in enumerate(tbar):
             image, target = sample['image'], sample['label']
-
-            print(image.shape)
+            
             if self.args.cuda:
                 image, target = image.cuda(), target.cuda()
             with torch.no_grad():
