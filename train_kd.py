@@ -61,11 +61,11 @@ class Trainer(object):
 
         distill_params = [{'params': self.s_net.get_1x_lr_params(), 'lr': args.lr},
                           {'params': self.s_net.get_10x_lr_params(), 'lr': args.lr * 10},
-                          {'params': self.d_net.Connectors.parameters(), 'lr': args.lr * 10},
-                          {'params': self.d_net.encoder.parameters(), 'lr': args.lr * 10}]
+                          {'params': self.d_net.Connectors.parameters(), 'lr': args.lr},
+                          {'params': self.d_net.encoder.parameters(), 'lr': args.lr}]
 
-        init_params = [{'params': self.d_net.Connectors.parameters(), 'lr': args.lr * 10},
-                       {'params': self.d_net.encoder.parameters(), 'lr': args.lr * 10}]
+        init_params = [{'params': self.d_net.Connectors.parameters(), 'lr': args.lr},
+                       {'params': self.d_net.encoder.parameters(), 'lr': args.lr}]
 
         # # Define Optimizer
         self.optimizer = torch.optim.SGD(distill_params, momentum=args.momentum,
@@ -163,7 +163,7 @@ class Trainer(object):
         test_loss = 0.0
         for i, sample in enumerate(tbar):
             image, target = sample['image'], sample['label']
-            
+
             if self.args.cuda:
                 image, target = image.cuda(), target.cuda()
             with torch.no_grad():
