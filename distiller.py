@@ -132,6 +132,7 @@ class Distiller(nn.Module):
            layer = 3
 
            b,c,h,w = t_feats[layer].shape
+
            M = h * w
 
            TF = t_feats[layer].view(b, M, c)
@@ -142,6 +143,11 @@ class Distiller(nn.Module):
            G = torch.einsum('bji, bik -> bjk', X, TF).view(b, h, w, c) + TF.view(b, h, w, c)
            
            G = G.view(b, c, h, w)
+
+
+           # change it for the student
+
+           c = 320
 
            F_t = self.Connectors[3](self.encoder(s_feats[layer].view(b, M, c)).view(b, c, h, w))
            
