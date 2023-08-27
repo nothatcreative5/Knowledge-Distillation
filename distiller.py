@@ -143,7 +143,7 @@ class Distiller(nn.Module):
            
            G = G.view(b, c, h, w)
 
-           F_t = self.Connectors[3](self.encoder(s_feats[layer]))
+           F_t = self.Connectors[3](self.encoder(s_feats[layer].view(b, M, c)).view(b, c, h, w))
            
            SA_loss = (G - F_t) ** 2
            SA_loss = SA_loss.sum() ** 0.5 / b
