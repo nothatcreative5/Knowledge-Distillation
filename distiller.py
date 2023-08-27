@@ -159,23 +159,15 @@ class Distiller(nn.Module):
            layer = 3
 
            b,c,h,w = t_feats[layer].shape
-
-           TF = t_feats[layer] # b x c' x h x w
-
-           # h and w are the same
-           
            M = h * w
 
-           TF = TF.view(b,M,c)
+           TF = t_feats[layer].view(b, M, c)
 
-           # b x M x M
            X = torch.bmm(TF, TF.permute(0,2,1)) / np.sqrt(M)
-
            X = F.softmax(X, dim = 2) 
 
-           # b x M x N^T
            G = torch.einsum('bji, bik -> bjk', X, TF).view(b, h, w, c) + TF.view(b, h, w, c)
-
+           
            G = G.view(b, c, h, w)
 
            F_t = self.Connectors[3](self.SAST(s_feats[layer]))
