@@ -35,7 +35,7 @@ def dist_loss(source, target):
     return loss.sum()
 
 def build_feature_connector(t_channel, s_channel):
-    C = [nn.Conv2d(s_channel, t_channel, kernel_size=1, stride=1, padding=0, bias=False),
+    C = [nn.Conv2d(s_channel, t_channel, kernel_size=3, stride=1, padding=1, bias=False),
          nn.BatchNorm2d(t_channel)]
 
     for m in C:
