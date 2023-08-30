@@ -162,7 +162,8 @@ class Trainer(object):
 
     def test(self):
         checkpoint = self.saver.load_checkpoint()
-        self.model.load_state_dict(checkpoint['state_dict'])
+        # self.model.load_state_dict(checkpoint['state_dict'])
+        self.model.module.load_state_dict(checkpoint['state_dict'])
 
         self.model.eval()
         self.evaluator.reset()
