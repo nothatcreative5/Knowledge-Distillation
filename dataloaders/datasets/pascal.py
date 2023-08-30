@@ -24,10 +24,7 @@ class VOCSegmentation(Dataset):
         :param transform: transform to apply
         """
         super().__init__()
-        if split != 'test':
-            self._base_dir = '/kaggle/input/pascal-voc-2012-dataset/VOC2012_train_val/VOC2012_train_val'
-        else:
-            self._base_dir = '/kaggle/input/pascal-voc-2012-dataset/VOC2012_test/VOC2012_test' 
+        self._base_dir = '/kaggle/input/pascal-voc-2012/VOC2012'
         self._image_dir = os.path.join(self._base_dir, 'JPEGImages')
         self._cat_dir = os.path.join(self._base_dir, 'SegmentationClass')
 
@@ -46,8 +43,18 @@ class VOCSegmentation(Dataset):
         self.categories = []
         
         for splt in self.split:
-            with open(os.path.join(os.path.join(_splits_dir, splt + '.txt')), "r") as f:
+            if splt == 'test':
+                _split_f = os.path.join(_splits_dir, 'val.txt')
+            else:
+                _split_f = os.path.join(_splits_dir, splt + '.txt')
+            with open(os.path.join(_split_f), "r") as f:
                 lines = f.read().splitlines()
+            
+            length = int(len(lines) * 0.5)
+            if splt == 'test':
+                lines = lines[length:]
+            elif splt == 'val':
+                lines = lines[:length]
 
             for ii, line in enumerate(lines):
                 _image = os.path.join(self._image_dir, line + ".jpg")
@@ -79,7 +86,7 @@ class VOCSegmentation(Dataset):
         for split in self.split:
             if split == "train":
                 return self.transform_tr(sample)
-            elif split == 'val':
+            elif split == 'val' or split == 'test':
                 return self.transform_val(sample)
 
 
