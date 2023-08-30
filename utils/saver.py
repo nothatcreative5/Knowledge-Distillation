@@ -41,6 +41,19 @@ class Saver(object):
             else:
                 shutil.copyfile(filename, os.path.join(self.directory, 'model_best.pth.tar'))
 
+
+    def load_checkpoint(self):
+        """Load checkpoint from disk"""
+        best_model = os.path.join(self.directory, 'model_best.pth.tar')
+        if os.path.isfile(best_model):
+            print("=> loading best model '{}'".format(best_model))
+            checkpoint = torch.load(best_model)
+        else:
+            print("=> no best model found at '{}'".format(best_model))
+
+        return checkpoint
+                
+
     def save_experiment_config(self):
         logfile = os.path.join(self.experiment_dir, 'parameters.txt')
         log_file = open(logfile, 'w')

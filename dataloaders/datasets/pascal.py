@@ -24,7 +24,10 @@ class VOCSegmentation(Dataset):
         :param transform: transform to apply
         """
         super().__init__()
-        self._base_dir = '/kaggle/input/pascal-voc-2012/VOC2012'
+        if split != 'test':
+            self._base_dir = '/kaggle/input/pascal-voc-2012-dataset/VOC2012_train_val/VOC2012_train_val'
+        else:
+            self._base_dir = '/kaggle/input/pascal-voc-2012-dataset/VOC2012_test/VOC2012_test' 
         self._image_dir = os.path.join(self._base_dir, 'JPEGImages')
         self._cat_dir = os.path.join(self._base_dir, 'SegmentationClass')
 
