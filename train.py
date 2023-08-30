@@ -132,7 +132,7 @@ class Trainer(object):
                 output = self.model(image)
             loss = self.criterion(output, target)
             test_loss += loss.item()
-            tbar.set_description('Test loss: %.3f' % (test_loss / (i + 1)))
+            tbar.set_description('Val loss: %.3f' % (test_loss / (i + 1)))
             pred = output.data.cpu().numpy()
             target = target.cpu().numpy()
             pred = np.argmax(pred, axis=1)
@@ -159,6 +159,38 @@ class Trainer(object):
                 'optimizer': self.optimizer.state_dict(),
                 'best_pred': self.best_pred,
             }, is_best)
+
+    def test(self):
+        checkpoint = self.saver.load_checkpoint()
+        self.model.load_state_dict(checkpoint['state_dict'])
+
+        self.model.eval()
+        self.evaluator.reset()
+        tbar = tqdm(self.test_loader, desc='\r')
+        test_loss = 0.0
+        for i, sample in enumerate(tbar):
+            image, target = sample['image'], sample['label']
+            if self.args.cuda:
+                image, target = image.cuda(), target.cuda()
+            with torch.no_grad():
+                output = self.model(image)
+            loss = self.criterion(output, target)
+            test_loss += loss.item()
+            tbar.set_description('Test loss: %.3f' % (test_loss / (i + 1)))
+            pred = output.data.cpu().numpy()
+            target = target.cpu().numpy()
+            pred = np.argmax(pred, axis=1)
+            # Add batch sample into evaluator
+            self.evaluator.add_batch(target, pred)
+
+        # Fast test during the training
+        Acc = self.evaluator.Pixel_Accuracy()
+        Acc_class = self.evaluator.Pixel_Accuracy_Class()
+        mIoU = self.evaluator.Mean_Intersection_over_Union()
+        FWIoU = self.evaluator.Frequency_Weighted_Intersection_over_Union()
+        print('Test:')
+        print("Acc:{}, Acc_class:{}, mIoU:{}, fwIoU: {}".format(Acc, Acc_class, mIoU, FWIoU))
+        print('Loss: %.3f' % test_loss)
 
 def main():
     parser = argparse.ArgumentParser(description="PyTorch DeeplabV3Plus Training")
@@ -278,6 +310,7 @@ def main():
         trainer.training(epoch)
         if not trainer.args.no_val and epoch % args.eval_interval == (args.eval_interval - 1):
             trainer.validation(epoch)
+    trainer.test()
 
 if __name__ == "__main__":
    main()
