@@ -137,8 +137,8 @@ class Trainer(object):
             ############# Comment line blow in case of ALW ################
 
             loss = loss_seg + pa_loss + pi_loss + lo_loss + SA_loss + ic_loss
-            SA_avg += SA_loss.item()
-            seg_avg += loss_seg.item()
+            # SA_avg += SA_loss.item()
+            # seg_avg += loss_seg.item()
             
             loss.backward()
             optimizer.step()
@@ -147,7 +147,7 @@ class Trainer(object):
 
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
         print('Loss: %.3f' % train_loss)
-        print(seg_avg / len(tbar), SA_avg / len(tbar))
+        # print(seg_avg / len(tbar), SA_avg / len(tbar))
         # wandb.log({"train loss": train_loss})
 
         if self.args.no_val:
@@ -204,7 +204,7 @@ class Trainer(object):
 
     def test(self):
         checkpoint = self.saver.load_checkpoint()
-        self.s_net.load_state_dict(checkpoint['state_dict'])
+        self.s_net.module.load_state_dict(checkpoint['state_dict'])
 
         self.s_net.eval()
         self.evaluator.reset()
