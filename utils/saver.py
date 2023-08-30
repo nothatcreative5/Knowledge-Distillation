@@ -44,7 +44,7 @@ class Saver(object):
 
     def load_checkpoint(self):
         """Load checkpoint from disk"""
-        best_model = os.path.join(self.directory, 'model_best.pth.tar')
+        best_model = os.path.join(self.experiment_dir, 'checkpoint.pth.tar')
         if os.path.isfile(best_model):
             print("=> loading best model '{}'".format(best_model))
             checkpoint = torch.load(best_model)
