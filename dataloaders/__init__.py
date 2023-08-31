@@ -7,7 +7,7 @@ def make_data_loader(args, **kwargs):
     if args.dataset == 'pascal':
         train_set = pascal.VOCSegmentation(args, split='train')
         val_set = pascal.VOCSegmentation(args, split='val')
-        test_set = pascal.VOCSegmentation(args, split='test')
+        # test_set = pascal.VOCSegmentation(args, split='test')
         if args.use_sbd:
             sbd_train = sbd.SBDSegmentation(args, split=['train', 'val'])
             train_set = combine_dbs.CombineDBs([train_set, sbd_train], excluded=[val_set])
