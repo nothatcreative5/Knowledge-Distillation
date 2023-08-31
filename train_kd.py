@@ -34,6 +34,9 @@ class Trainer(object):
                              output_stride=args.out_stride,
                              sync_bn=args.sync_bn,
                              freeze_bn=args.freeze_bn)
+        A = torch.rand((1, 3, 513, 513))
+        self.t_net(A)
+        print('hey')
         # checkpoint = torch.load('/kaggle/working/' + args.teacher_path)
         checkpoint = torch.load(args.teacher_path)
         self.t_net.load_state_dict(checkpoint['state_dict'])
@@ -156,7 +159,7 @@ class Trainer(object):
 
 
     def validation(self, epoch):
-        self.s_net.eval()
+        self.t_net.eval()
         self.evaluator.reset()
         tbar = tqdm(self.val_loader, desc='\r')
         test_loss = 0.0
