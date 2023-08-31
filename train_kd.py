@@ -35,8 +35,8 @@ class Trainer(object):
                              sync_bn=args.sync_bn,
                              freeze_bn=args.freeze_bn)
         A = torch.rand((1, 3, 513, 513))
-        self.t_net(A)
-        print('hey')
+        self.s_net(A)
+        print('done')
         # checkpoint = torch.load('/kaggle/working/' + args.teacher_path)
         checkpoint = torch.load(args.teacher_path)
         self.t_net.load_state_dict(checkpoint['state_dict'])
