@@ -143,6 +143,7 @@ class Trainer(object):
 
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
         print('Loss: %.3f' % train_loss)
+        print(ic_loss, loss_seg)
         # print(seg_avg / len(tbar), SA_avg / len(tbar))
         # wandb.log({"train loss": train_loss})
 
@@ -157,7 +158,7 @@ class Trainer(object):
 
 
     def validation(self, epoch):
-        self.t_net.eval()
+        self.s_net.eval()
         self.evaluator.reset()
         tbar = tqdm(self.val_loader, desc='\r')
         test_loss = 0.0
@@ -167,7 +168,7 @@ class Trainer(object):
             if self.args.cuda:
                 image, target = image.cuda(), target.cuda()
             with torch.no_grad():
-                output = self.t_net(image)
+                output = self.s_net(image)
             loss = self.criterion(output, target)
             test_loss += loss.item()
             tbar.set_description('Val loss: %.3f' % (test_loss / (i + 1)))
@@ -344,7 +345,7 @@ def main():
     print('Starting Epoch:', trainer.args.start_epoch)
     print('Total Epoches:', trainer.args.epochs)
     for epoch in range(trainer.args.start_epoch, trainer.args.epochs):
-        # trainer.training(epoch)
+        trainer.training(epoch)
         if not trainer.args.no_val and epoch % args.eval_interval == (args.eval_interval - 1):
             trainer.validation(epoch)
             
