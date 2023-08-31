@@ -43,18 +43,10 @@ class VOCSegmentation(Dataset):
         self.categories = []
         
         for splt in self.split:
-            if splt == 'test':
-                _split_f = os.path.join(_splits_dir, 'val.txt')
-            else:
-                _split_f = os.path.join(_splits_dir, splt + '.txt')
+            _split_f = os.path.join(_splits_dir, splt + '.txt')
             with open(os.path.join(_split_f), "r") as f:
                 lines = f.read().splitlines()
-            
-            length = int(len(lines) * 0.5)
-            if splt == 'test':
-                lines = lines[length:]
-            elif splt == 'val':
-                lines = lines[:length]
+        
 
             for ii, line in enumerate(lines):
                 _image = os.path.join(self._image_dir, line + ".jpg")
@@ -86,7 +78,7 @@ class VOCSegmentation(Dataset):
         for split in self.split:
             if split == "train":
                 return self.transform_tr(sample)
-            elif split == 'val' or split == 'test':
+            elif split == 'val':
                 return self.transform_val(sample)
 
 

@@ -110,9 +110,6 @@ class Trainer(object):
         self.d_net.module.t_net.train()
         self.d_net.module.s_net.train()
         tbar = tqdm(self.train_loader)
-        num_img_tr = len(self.train_loader)
-        SA_avg = 0
-        seg_avg = 0
 
         if epoch == 0:
             optimizer = self.init_optimizer
@@ -137,8 +134,6 @@ class Trainer(object):
             ############# Comment line blow in case of ALW ################
 
             loss = loss_seg + pa_loss + pi_loss + lo_loss + SA_loss + ic_loss
-            # SA_avg += SA_loss.item()
-            # seg_avg += loss_seg.item()
             
             loss.backward()
             optimizer.step()
@@ -171,7 +166,7 @@ class Trainer(object):
             if self.args.cuda:
                 image, target = image.cuda(), target.cuda()
             with torch.no_grad():
-                output = self.s_net(image)
+                output = self.t_net(image)
             loss = self.criterion(output, target)
             test_loss += loss.item()
             tbar.set_description('Val loss: %.3f' % (test_loss / (i + 1)))
@@ -201,41 +196,6 @@ class Trainer(object):
                 'state_dict': self.s_net.module.state_dict(),
                 'best_pred': self.best_pred,
             }, is_best)
-
-    def test(self):
-        checkpoint = self.saver.load_checkpoint()
-        self.s_net.module.load_state_dict(checkpoint['state_dict'])
-
-        self.s_net.eval()
-        self.evaluator.reset()
-        tbar = tqdm(self.test_loader, desc='\r')
-        test_loss = 0.0
-        for i, sample in enumerate(tbar):
-            image, target = sample['image'], sample['label']
-
-            if self.args.cuda:
-                image, target = image.cuda(), target.cuda()
-            with torch.no_grad():
-                output = self.s_net(image)
-            loss = self.criterion(output, target)
-            test_loss += loss.item()
-            tbar.set_description('Test loss: %.3f' % (test_loss / (i + 1)))
-            pred = output.data.cpu().numpy()
-            target = target.cpu().numpy()
-            pred = np.argmax(pred, axis=1)
-            # Add batch sample into evaluator
-            self.evaluator.add_batch(target, pred)
-            
-        # Fast test during the training
-        Acc = self.evaluator.Pixel_Accuracy()
-        Acc_class = self.evaluator.Pixel_Accuracy_Class()
-        mIoU = self.evaluator.Mean_Intersection_over_Union()
-        FWIoU = self.evaluator.Frequency_Weighted_Intersection_over_Union()
-        
-        print('Test:')
-        print("Acc:{}, Acc_class:{}, mIoU:{}, fwIoU: {}".format(Acc, Acc_class, mIoU, FWIoU))
-        print('Loss: %.3f' % test_loss)
-        # wandb.log({"test loss": test_loss, "mIOU": mIoU})
 
 def main():
     parser = argparse.ArgumentParser(description="PyTorch DeeplabV3Plus Training")
@@ -386,7 +346,6 @@ def main():
         trainer.training(epoch)
         if not trainer.args.no_val and epoch % args.eval_interval == (args.eval_interval - 1):
             trainer.validation(epoch)
-    trainer.test()
             
     # wandb.finish()
 

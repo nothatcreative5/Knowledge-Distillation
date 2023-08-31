@@ -50,7 +50,6 @@ def build_feature_connector(t_channel, s_channel):
 
 
    
-
 def dist2(tensor_a, tensor_b, attention_mask=None, channel_attention_mask=None):
     diff = (tensor_a - tensor_b) ** 2
     #   print(diff.size())      batchsize x 1 x W x H,
@@ -128,27 +127,20 @@ class Distiller(nn.Module):
 
         SA_loss = 0
         if self.args.SA_lambda is not None: # Selt-attention loss
-           
            layer = 3
-
            b,c,h,w = t_feats[layer].shape
 
            M = h * w
-
            TF = t_feats[layer].view(b, M, c)
 
            X = torch.bmm(TF, TF.permute(0,2,1)) / np.sqrt(M)
            X = F.softmax(X, dim = 2) 
 
            G = torch.einsum('bji, bik -> bjk', X, TF).view(b, h, w, c) + TF.view(b, h, w, c)
-           
            G = G.view(b, c, h, w)
 
-
            # change it for the student
-
            c = 320
-
            F_t = self.Connectors[3](self.encoder(s_feats[layer].view(b, M, c)).view(b, c, h, w))
            
            SA_loss = (G - F_t) ** 2
@@ -172,8 +164,6 @@ class Distiller(nn.Module):
 
             G_diff = ICCS - ICCT
             ic_loss = self.args.ic_lambda * (G_diff * G_diff).view(b, -1).sum() / (c*b)
-        
-        
         
         lo_loss = 0
         if self.args.lo_lambda is not None: 
