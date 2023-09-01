@@ -137,7 +137,7 @@ class Distiller(nn.Module):
            X = F.softmax(X, dim = 2) 
 
            G = torch.einsum('bji, bik -> bjk', X, TF).view(b, h, w, c_T) + TF.view(b, h, w, c_T)
-           G = G.view(b, c, M)
+           G = G.view(b, c_T, M)
 
            # normalize G
            G = torch.nn.functional.normalize(G, dim = 1)
