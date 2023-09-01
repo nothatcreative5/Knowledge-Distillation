@@ -117,11 +117,11 @@ class Distiller(nn.Module):
           pa_loss = self.args.pa_lambda * self.criterion(maxpool(feat_S), maxpool(feat_T))
 
 
-        loss_distill = 0
-        for i in range(feat_num):
-            s_feats[i] = self.Connectors[i](s_feats[i])
-            loss_distill += distillation_loss(s_feats[i], t_feats[i].detach(), getattr(self, 'margin%d' % (i+1))) \
-                            / self.loss_divider[i]
+        # loss_distill = 0
+        # for i in range(feat_num):
+        #     s_feats[i] = self.Connectors[i](s_feats[i])
+        #     loss_distill += distillation_loss(s_feats[i], t_feats[i].detach(), getattr(self, 'margin%d' % (i+1))) \
+        #                     / self.loss_divider[i]
    
         # Wrong?
         pi_loss = 0
