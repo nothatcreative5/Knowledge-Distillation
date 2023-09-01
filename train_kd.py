@@ -125,7 +125,7 @@ class Trainer(object):
             self.scheduler(optimizer, i, epoch, self.best_pred)
             optimizer.zero_grad()
             
-            output, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss = self.d_net(image)
+            output, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss = self.d_net(image, target)
             loss_seg = self.criterion(output, target)
             
             ########### uncomment lines below for ALW ##################

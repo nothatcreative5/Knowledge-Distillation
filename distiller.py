@@ -5,6 +5,7 @@ from scipy.stats import norm
 import scipy
 import numpy as np
 import math
+from utils.loss import SegmentationLosses
 
 
 def L2(f_):
@@ -96,12 +97,14 @@ class Distiller(nn.Module):
         self.t_net = t_net
         self.s_net = s_net
         self.args = args
+        self.optimizer = torch.optim.SGD(self.t_net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+        self.criterion = SegmentationLosses(weight=None, cuda=args.cuda).build_loss(mode=args.loss_type)
         self.loss_divider = [8, 4, 2, 1, 1, 4*4]
         self.criterion = sim_dis_compute
         self.temperature = 1
         self.scale = 0.5
 
-    def forward(self, x):
+    def forward(self, x, y):
 
         t_feats, t_out = self.t_net.extract_feature(x)
         s_feats, s_out = self.s_net.extract_feature(x)
@@ -116,12 +119,6 @@ class Distiller(nn.Module):
           maxpool = nn.MaxPool2d(kernel_size=(patch_w, patch_h), stride=(patch_w, patch_h), padding=0, ceil_mode=True) # change
           pa_loss = self.args.pa_lambda * self.criterion(maxpool(feat_S), maxpool(feat_T))
 
-
-        # loss_distill = 0
-        # for i in range(feat_num):
-        #     s_feats[i] = self.Connectors[i](s_feats[i])
-        #     loss_distill += distillation_loss(s_feats[i], t_feats[i].detach(), getattr(self, 'margin%d' % (i+1))) \
-        #                     / self.loss_divider[i]
    
         # Wrong?
         pi_loss = 0
@@ -169,6 +166,13 @@ class Distiller(nn.Module):
         ic_loss = 0
         if self.args.ic_lambda is not None: #logits loss
             b, c, h, w = s_out.shape
+            self.optimizer.zero_grad()
+            L_t = self.criterion(t_out, y)
+            L_t.backward()
+
+
+            t_out = torch.nn.functional.normalize(t_out.grad, dim = 1) * t_out
+
             s_logit = torch.reshape(s_out, (b, c, h*w))
             t_logit = torch.reshape(t_out, (b, c, h*w))
 

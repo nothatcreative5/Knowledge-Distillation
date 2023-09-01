@@ -86,6 +86,8 @@ class DeepLab(nn.Module):
         feat, x = self.decoder.extract_feature(x, low_level_feat)
         feats += feat
         x = F.interpolate(x, size=input.size()[2:], mode='bilinear', align_corners=True)
+
+        x.retain_grad()
         
 
         #img = torch.sum((feats[5])[0], axis=0).cpu().detach().numpy()
