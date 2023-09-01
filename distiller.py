@@ -170,6 +170,7 @@ class Distiller(nn.Module):
             L_t = self.criterion(t_out, y)
             L_t.backward()
 
+            t_out = t_out.detach()
 
             t_out = torch.nn.functional.normalize(t_out.grad, dim = 1) * t_out
 
