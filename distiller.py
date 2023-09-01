@@ -115,6 +115,13 @@ class Distiller(nn.Module):
           patch_w, patch_h = int(total_w*self.scale), int(total_h*self.scale)
           maxpool = nn.MaxPool2d(kernel_size=(patch_w, patch_h), stride=(patch_w, patch_h), padding=0, ceil_mode=True) # change
           pa_loss = self.args.pa_lambda * self.criterion(maxpool(feat_S), maxpool(feat_T))
+
+
+        loss_distill = 0
+        for i in range(feat_num):
+            s_feats[i] = self.Connectors[i](s_feats[i])
+            loss_distill += distillation_loss(s_feats[i], t_feats[i].detach(), getattr(self, 'margin%d' % (i+1))) \
+                            / self.loss_divider[i]
    
         # Wrong?
         pi_loss = 0
@@ -195,4 +202,4 @@ class Distiller(nn.Module):
           ICCT = torch.nn.functional.normalize(ICCT, dim = 1)
           lo_loss =  self.args.lo_lambda * (ICCS - ICCT).pow(2).mean()/b 
 
-        return s_out, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss
+        return s_out, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss, loss_distill
