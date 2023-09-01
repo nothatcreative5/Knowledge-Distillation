@@ -85,7 +85,7 @@ class Distiller(nn.Module):
 
         self.Connectors = nn.ModuleList([build_feature_connector(t, s) for t, s in zip(t_channels, s_channels)])
 
-        encoder_layer = nn.TransformerEncoderLayer(d_model=s_channels[3], nhead=8, batch_first = True)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=s_channels[3], nhead=8, batch_first = True, dropout = 0.5)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)  
 
         teacher_bns = t_net.get_bn_before_relu()
@@ -137,14 +137,21 @@ class Distiller(nn.Module):
            X = F.softmax(X, dim = 2) 
 
            G = torch.einsum('bji, bik -> bjk', X, TF).view(b, h, w, c) + TF.view(b, h, w, c)
-           G = G.view(b, c, h, w)
+           G = G.view(b, c, M)
+
+           # normalize G
+           G = torch.nn.functional.normalize(G, dim = 1)
 
            # change it for the student
            c = 320
            F_t = self.Connectors[3](self.encoder(s_feats[layer].view(b, M, c)).view(b, c, h, w))
+
+           F_t = F_t.view(b, c, M)
+
+           F_t = torch.nn.functional.normalize(F_t, dim = 1)
            
-           SA_loss = (G - F_t) ** 2
-           SA_loss = SA_loss.sum() ** 0.5 / b
+           SA_loss = torch.norm(G - F_t, dim = 1)
+           SA_loss = SA_loss.sum() / M
 
            SA_loss = self.args.SA_lambda * SA_loss
 
