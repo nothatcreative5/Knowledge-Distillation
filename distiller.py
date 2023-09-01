@@ -100,7 +100,7 @@ class Distiller(nn.Module):
         self.optimizer = torch.optim.SGD(self.t_net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
         self.criterion = SegmentationLosses(weight=None, cuda=args.cuda).build_loss(mode=args.loss_type)
         self.loss_divider = [8, 4, 2, 1, 1, 4*4]
-        self.criterion = sim_dis_compute
+        # self.criterion = sim_dis_compute
         self.temperature = 1
         self.scale = 0.5
 
