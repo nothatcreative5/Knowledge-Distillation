@@ -145,8 +145,8 @@ class Distiller(nn.Module):
            # change it for the student
            c_S = 320
         #    F_t = self.Connectors[3](self.encoder(s_feats[layer].view(b, M, c_S)).view(b, c_S, h, w))
-           F_t = self.Connectors[3](self.encoder(torch.reshape(s_feats[layer], (b, M, c_S))))
-           F_t = torch.reshape(F_t, (b, c_S, h, w))
+           encoded = self.encoder(torch.reshape(s_feats[layer], (b, M, c_S)))
+           F_t = self.Connectors[3](torch.reshape(encoded, (b, c_S, h, w)))
 
         #    F_t = F_t.view(b, c_T, M)
            F_t = torch.reshape(F_t, (b, c_T, M))
