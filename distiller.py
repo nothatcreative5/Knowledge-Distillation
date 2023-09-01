@@ -202,4 +202,4 @@ class Distiller(nn.Module):
           ICCT = torch.nn.functional.normalize(ICCT, dim = 1)
           lo_loss =  self.args.lo_lambda * (ICCS - ICCT).pow(2).mean()/b 
 
-        return s_out, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss, loss_distill
+        return s_out, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss
