@@ -143,7 +143,7 @@ class Trainer(object):
 
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
         print('Loss: %.3f' % train_loss)
-        print(ic_loss, loss_seg)
+        print(SA_loss, loss_seg)
         # print(seg_avg / len(tbar), SA_avg / len(tbar))
         # wandb.log({"train loss": train_loss})
 
