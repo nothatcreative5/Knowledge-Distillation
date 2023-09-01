@@ -128,25 +128,25 @@ class Distiller(nn.Module):
         SA_loss = 0
         if self.args.SA_lambda is not None: # Selt-attention loss
            layer = 3
-           b,c,h,w = t_feats[layer].shape
+           b,c_T,h,w = t_feats[layer].shape
 
            M = h * w
-           TF = t_feats[layer].view(b, M, c)
+           TF = t_feats[layer].view(b, M, c_T)
 
            X = torch.bmm(TF, TF.permute(0,2,1)) / np.sqrt(M)
            X = F.softmax(X, dim = 2) 
 
-           G = torch.einsum('bji, bik -> bjk', X, TF).view(b, h, w, c) + TF.view(b, h, w, c)
+           G = torch.einsum('bji, bik -> bjk', X, TF).view(b, h, w, c_T) + TF.view(b, h, w, c_T)
            G = G.view(b, c, M)
 
            # normalize G
            G = torch.nn.functional.normalize(G, dim = 1)
 
            # change it for the student
-           c = 320
-           F_t = self.Connectors[3](self.encoder(s_feats[layer].view(b, M, c)).view(b, c, h, w))
+           c_S = 320
+           F_t = self.Connectors[3](self.encoder(s_feats[layer].view(b, M, c_S)).view(b, c_S, h, w))
 
-           F_t = F_t.view(b, c, M)
+           F_t = F_t.view(b, c_T, M)
 
            F_t = torch.nn.functional.normalize(F_t, dim = 1)
            
