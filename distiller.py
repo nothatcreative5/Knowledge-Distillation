@@ -104,75 +104,16 @@ class Distiller(nn.Module):
         self.temperature = 1
         self.scale = 0.5
 
-    def forward(self, x, y):
+    def forward(self, x):
 
         t_feats, t_out = self.t_net.extract_feature(x)
         s_feats, s_out = self.s_net.extract_feature(x)
         feat_num = len(t_feats)
 
-        pa_loss = 0 
-        if self.args.pa_lambda is not None: # pairwise loss
-          feat_T = t_feats[4]
-          feat_S = s_feats[4]
-          total_w, total_h = feat_T.shape[2], feat_T.shape[3]
-          patch_w, patch_h = int(total_w*self.scale), int(total_h*self.scale)
-          maxpool = nn.MaxPool2d(kernel_size=(patch_w, patch_h), stride=(patch_w, patch_h), padding=0, ceil_mode=True) # change
-          pa_loss = self.args.pa_lambda * self.criterion(maxpool(feat_S), maxpool(feat_T))
-
-   
-        # Wrong?
-        pi_loss = 0
-        if self.args.pi_lambda is not None: # pixelwise loss
-          #TF = F.normalize(t_feats[5].pow(2).mean(1)) 
-          #SF = F.normalize(s_feats[5].pow(2).mean(1)) 
-          #pi_loss = self.args.pi_lambda * (TF - SF).pow(2).mean()
-          pi_loss =  self.args.pi_lambda * torch.nn.KLDivLoss()(F.log_softmax(s_out / self.temperature, dim=1), F.softmax(t_out / self.temperature, dim=1))
-
-
-        SA_loss = 0
-        if self.args.SA_lambda is not None: # Selt-attention loss
-           layer = 3
-           b,c_T,h,w = t_feats[layer].shape
-
-           M = h * w
-           TF = t_feats[layer].view(b, M, c_T)
-
-           X = torch.bmm(TF, TF.permute(0,2,1)) / np.sqrt(M)
-           X = F.softmax(X, dim = 2) 
-
-           G = torch.einsum('bji, bik -> bjk', X, TF).view(b, h, w, c_T) + TF.view(b, h, w, c_T)
-           G = G.view(b, c_T, M)
-
-           # normalize G
-           G = torch.nn.functional.normalize(G, dim = 1)
-
-           # change it for the student
-           c_S = 320
-        #    F_t = self.Connectors[3](self.encoder(s_feats[layer].view(b, M, c_S)).view(b, c_S, h, w))
-           encoded = self.encoder(torch.reshape(s_feats[layer], (b, M, c_S)))
-           F_t = self.Connectors[3](torch.reshape(encoded, (b, c_S, h, w)))
-
-        #    F_t = F_t.view(b, c_T, M)
-           F_t = torch.reshape(F_t, (b, c_T, M))
-
-           F_t = torch.nn.functional.normalize(F_t, dim = 1)
-           
-           SA_loss = torch.norm(G - F_t, dim = 1)
-           SA_loss = SA_loss.sum() / M
-
-           SA_loss = self.args.SA_lambda * SA_loss
-
         # Correct
         ic_loss = 0
         if self.args.ic_lambda is not None: #logits loss
             b, c, h, w = s_out.shape
-            self.optimizer.zero_grad()
-            L_t = self.criterion(t_out, y)
-            L_t.backward()
-
-            t_out = torch.nn.functional.normalize(t_out.grad, dim = 1) * t_out
-
-            t_out = t_out.detach()
 
             s_logit = torch.reshape(s_out, (b, c, h*w))
             t_logit = torch.reshape(t_out, (b, c, h*w))
@@ -186,25 +127,5 @@ class Distiller(nn.Module):
 
             G_diff = ICCS - ICCT
             ic_loss = self.args.ic_lambda * (G_diff * G_diff).view(b, -1).sum() / (c*b)
-        
-        lo_loss = 0
-        if self.args.lo_lambda is not None: 
-          b, c, h, w = s_out.shape
-          s_logit = torch.reshape(s_out, (b, c, h*w))
-          t_logit = torch.reshape(t_out, (b, c, h*w))
 
-          s_logit = F.softmax(s_out / self.temperature, dim=2)
-          t_logit = F.softmax(t_out / self.temperature, dim=2)
-          kl = torch.nn.KLDivLoss(reduction="batchmean")
-          ICCS = torch.empty((21,21)).cuda()
-          ICCT = torch.empty((21,21)).cuda()
-          for i in range(21):
-            for j in range(i, 21):
-              ICCS[j, i] = ICCS[i, j] = kl(s_logit[:, i], s_logit[:, j])
-              ICCT[j, i] = ICCT[i, j] = kl(t_logit[:, i], t_logit[:, j])
-
-          ICCS = torch.nn.functional.normalize(ICCS, dim = 1)
-          ICCT = torch.nn.functional.normalize(ICCT, dim = 1)
-          lo_loss =  self.args.lo_lambda * (ICCS - ICCT).pow(2).mean()/b 
-
-        return s_out, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss
+        return s_out,ic_loss

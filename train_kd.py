@@ -125,7 +125,7 @@ class Trainer(object):
             self.scheduler(optimizer, i, epoch, self.best_pred)
             optimizer.zero_grad()
             
-            output, pa_loss, pi_loss, ic_loss, lo_loss, SA_loss = self.d_net(image, target)
+            output, ic_loss= self.d_net(image)
             loss_seg = self.criterion(output, target)
             
             ########### uncomment lines below for ALW ##################
@@ -134,7 +134,7 @@ class Trainer(object):
             
             ############# Comment line blow in case of ALW ################
 
-            loss = loss_seg + pa_loss + pi_loss + lo_loss + SA_loss + ic_loss
+            loss = loss_seg + ic_loss
             
             loss.backward()
             optimizer.step()
@@ -143,7 +143,7 @@ class Trainer(object):
 
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
         print('Loss: %.3f' % train_loss)
-        print(SA_loss, loss_seg)
+        print(ic_loss, loss_seg)
         # print(seg_avg / len(tbar), SA_avg / len(tbar))
         # wandb.log({"train loss": train_loss})
 
