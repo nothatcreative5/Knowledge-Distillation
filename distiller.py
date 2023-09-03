@@ -110,6 +110,38 @@ class Distiller(nn.Module):
         s_feats, s_out = self.s_net.extract_feature(x)
         feat_num = len(t_feats)
 
+
+
+        SA_loss = 0
+        if self.args.sa_lambda is not None:
+            layer = 3
+            TF = t_feats[layer]
+            SF = self.Connectors[layer](s_feats[layer])
+
+            b,c,h,w = TF.shape
+
+            M = h*w
+
+            # (b, c, h, w) -> (b, c)
+            TF_c = torch.sum(torch.abs(TF), dim = [2,3])
+            TF = TF.reshape(b,c,-1)
+            # (B,C, HW, HW)
+            ATT_T = torch.einsum('bij, bki -> bijk', TF,torch.permute(TF, (0, 2, 1)))
+            ATT_T = torch.einsum('bijk, bi -> bjk', ATT_T, TF_c)
+            ATT_T = torch.nn.functional.normalize(ATT_T, dim = 2)
+
+
+            SF_c = torch.sum(torch.abs(SF), dim = [2,3])
+            SF = SF.reshape(b,c,-1)
+            ATT_S = torch.einsum('bij, bki -> bijk', SF,torch.permute(SF, (0, 2, 1)))
+            ATT_S = torch.einsum('bijk, bi -> bjk', ATT_S, SF_c)
+            ATT_S = torch.nn.functional.normalize(ATT_S, dim = 2)
+
+            Att_diff = ATT_S - ATT_T
+            SA_loss = self.args.sa_lambda * (Att_diff * Att_diff).view(b, -1).sum() / (b * M ** 2)
+
+
+
         # Correct
         ic_loss = 0
         if self.args.ic_lambda is not None: #logits loss
@@ -128,4 +160,4 @@ class Distiller(nn.Module):
             G_diff = ICCS - ICCT
             ic_loss = self.args.ic_lambda * (G_diff * G_diff).view(b, -1).sum() / (c*b)
 
-        return s_out,ic_loss
+        return s_out,ic_loss, SA_loss
