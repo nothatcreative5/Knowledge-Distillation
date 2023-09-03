@@ -113,7 +113,7 @@ class Distiller(nn.Module):
 
 
         SA_loss = 0
-        if self.args.sa_lambda is not None:
+        if self.args.SA_lambda is not None:
             layer = 3
             TF = t_feats[layer]
             SF = self.Connectors[layer](s_feats[layer])
