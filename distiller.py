@@ -111,36 +111,35 @@ class Distiller(nn.Module):
         feat_num = len(t_feats)
 
 
-
         SA_loss = 0
         if self.args.SA_lambda is not None:
-            layer = 3
-            TF = t_feats[layer]
-            SF = self.Connectors[layer](s_feats[layer])
+           layer = 3
+           b,c_T,h,w = t_feats[layer].shape
 
-            b,c,h,w = TF.shape
+           M = h * w
+           TF = t_feats[layer].view(b, M, c_T)
 
-            M = h*w
+           X = torch.bmm(TF, TF.permute(0,2,1)) / np.sqrt(M)
+           X = F.softmax(X, dim = 2) 
 
-            # (b, c, h, w) -> (b, c)
-            TF_c = torch.sum(torch.abs(TF), dim = [2,3])
-            TF = TF.reshape(b,c,-1)
-            # (B,C, HW, HW)
-            ATT_T = torch.einsum('bij, bki -> bijk', TF,torch.permute(TF, (0, 2, 1)))
-            ATT_T = torch.einsum('bijk, bi -> bjk', ATT_T, TF_c)
-            ATT_T = torch.nn.functional.normalize(ATT_T, dim = 2)
+           G = torch.einsum('bji, bik -> bjk', X, TF).view(b, h, w, c_T) + TF.view(b, h, w, c_T)
+           G = G.view(b, c_T, M)
 
+           G = torch.nn.functional.normalize(G, dim = 1)
 
-            SF_c = torch.sum(torch.abs(SF), dim = [2,3])
-            SF = SF.reshape(b,c,-1)
-            ATT_S = torch.einsum('bij, bki -> bijk', SF,torch.permute(SF, (0, 2, 1)))
-            ATT_S = torch.einsum('bijk, bi -> bjk', ATT_S, SF_c)
-            ATT_S = torch.nn.functional.normalize(ATT_S, dim = 2)
+           # change it for the student
+           c_S = 320
+           encoded = self.encoder(torch.reshape(s_feats[layer], (b, M, c_S)))
+           F_t = self.Connectors[3](torch.reshape(encoded, (b, c_S, h, w)))
 
-            Att_diff = ATT_S - ATT_T
-            SA_loss = self.args.sa_lambda * (Att_diff * Att_diff).view(b, -1).sum() / (b * M ** 2)
+           F_t = torch.reshape(F_t, (b, c_T, M))
 
+           F_t = torch.nn.functional.normalize(F_t, dim = 1)
+           
+           SA_loss = torch.norm(G - F_t, dim = 1)
+           SA_loss = SA_loss.sum() / (M * b)
 
+           SA_loss = self.args.SA_lambda * SA_loss
 
         # Correct
         ic_loss = 0
