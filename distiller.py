@@ -109,9 +109,6 @@ class Distiller(nn.Module):
         t_feats, t_out = self.t_net.extract_feature(x)
         s_feats, s_out = self.s_net.extract_feature(x)
 
-
-        t_feats = t_feats.detach()
-
         feat_num = len(t_feats)
 
         b, c, h, w = x.shape
@@ -157,7 +154,7 @@ class Distiller(nn.Module):
             b, c, h, w = s_out.shape
 
             s_logit = torch.reshape(s_out, (b, c, h*w))
-            t_logit = torch.reshape(t_out, (b, c, h*w))
+            t_logit = torch.reshape(t_out, (b, c, h*w)).detach()
 
             y_cpy = torch.reshape(y_cpy, (b, h*w))
 
