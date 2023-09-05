@@ -153,6 +153,7 @@ class Distiller(nn.Module):
 
             for i in range(b):
                 preds = torch.argmax(t_logit[i], dim = 0)
+                print(y[i][0])
                 indices = y[i] != preds
                 val_mx = torch.max(t_logit[i])
                 val_mn = torch.min(t_logit[i])
