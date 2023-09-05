@@ -157,7 +157,7 @@ class Distiller(nn.Module):
                 val_mx = torch.max(t_logit[i])
                 val_mn = torch.min(t_logit[i])
 
-                corrected_logits = torch.ones((c, indices.sum())) * val_mn
+                corrected_logits = torch.ones((c, indices.sum()), device = 'cuda') * val_mn
                 corrected_logits[y[i][indices], torch.arange(indices.sum())] = val_mx
                 t_logit[i][:, indices] = corrected_logits
 
