@@ -113,7 +113,7 @@ class Distiller(nn.Module):
         b, c, h, w = x.shape
 
         # y_cpy = y.clone().detach()
-        y_cpy = torch.rand((b, h, w))
+        y_cpy = torch.rand((b, h, w), device = 'cuda')
         y_cpy[y_cpy == 255] = 0
 
 
