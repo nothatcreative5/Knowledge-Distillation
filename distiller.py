@@ -110,8 +110,8 @@ class Distiller(nn.Module):
         s_feats, s_out = self.s_net.extract_feature(x)
         feat_num = len(t_feats)
 
-        y = y.clone().detach()
-        y[y == 255] = 0
+        y_cpy = y.clone().detach()
+        y_cpy[y_cpy == 255] = 0
 
 
         SA_loss = 0
@@ -152,16 +152,18 @@ class Distiller(nn.Module):
             s_logit = torch.reshape(s_out, (b, c, h*w))
             t_logit = torch.reshape(t_out, (b, c, h*w))
 
-            y = torch.reshape(y, (b, h*w))
+            y_cpy = torch.reshape(y_cpy, (b, h*w))
 
             for i in range(b):
                 preds = torch.argmax(t_logit[i], dim = 0)
-                indices = y[i] != preds
+                indices = y_cpy[i] != preds
                 val_mx = torch.max(t_logit[i])
                 val_mn = torch.min(t_logit[i])
 
+                print(indices.sum())
+
                 corrected_logits = torch.ones((c, indices.sum()), device = 'cuda') * val_mn
-                corrected_logits[y.long()[i][indices], torch.arange(indices.sum())] = val_mx
+                corrected_logits[y_cpy.long()[i][indices], torch.arange(indices.sum())] = val_mx
                 t_logit[i][:, indices] = corrected_logits
 
             # b x c x A  mul  b x A x c -> b x c x c
