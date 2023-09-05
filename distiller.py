@@ -110,7 +110,10 @@ class Distiller(nn.Module):
         s_feats, s_out = self.s_net.extract_feature(x)
         feat_num = len(t_feats)
 
-        y_cpy = y.clone().detach()
+        b, c, h, w = x.shape
+
+        # y_cpy = y.clone().detach()
+        y_cpy = torch.rand((b, h, w))
         y_cpy[y_cpy == 255] = 0
 
 
