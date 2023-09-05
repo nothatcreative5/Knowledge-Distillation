@@ -125,7 +125,7 @@ class Trainer(object):
             self.scheduler(optimizer, i, epoch, self.best_pred)
             optimizer.zero_grad()
             
-            output, ic_loss, SA_loss= self.d_net(image)
+            output, ic_loss, SA_loss= self.d_net(image, target)
             loss_seg = self.criterion(output, target)
             
             ########### uncomment lines below for ALW ##################
@@ -134,10 +134,10 @@ class Trainer(object):
             
             ############# Comment line blow in case of ALW ################
 
-            if epoch > 29:
-                SA_loss = 0
-            else:
-                ic_loss = 0
+            # if epoch > 89:
+                # SA_loss = 0
+            # else:
+                # ic_loss = 0
 
             loss = loss_seg + ic_loss + SA_loss
             

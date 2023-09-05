@@ -104,7 +104,7 @@ class Distiller(nn.Module):
         self.temperature = 1
         self.scale = 0.5
 
-    def forward(self, x):
+    def forward(self, x, y):
 
         t_feats, t_out = self.t_net.extract_feature(x)
         s_feats, s_out = self.s_net.extract_feature(x)
@@ -148,6 +148,18 @@ class Distiller(nn.Module):
 
             s_logit = torch.reshape(s_out, (b, c, h*w))
             t_logit = torch.reshape(t_out, (b, c, h*w))
+
+            y = torch.reshape(y, (b, h*w))
+
+            for i in range(b):
+                preds = torch.argmax(t_logit[i], dim = 0)
+                indices = y[i] != preds
+                val_mx = torch.max(t_logit[i])
+                val_mn = torch.min(t_logit[i])
+
+                corrected_logits = torch.ones((c, indices.sum())) * val_mn
+                corrected_logits[y[i][indices], torch.arange(indices.sum())] = val_mx
+                t_logit[i][:, indices] = corrected_logits
 
             # b x c x A  mul  b x A x c -> b x c x c
             ICCT = torch.bmm(t_logit, t_logit.permute(0,2,1))

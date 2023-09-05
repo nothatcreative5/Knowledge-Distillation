@@ -45,7 +45,7 @@ class DeepLab(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 m.eval()
 
-    def get_1x_lr_params(self):
+    def sget_1x_lr_params(self):
         modules = [self.backbone]
         for i in range(len(modules)):
             for m in modules[i].named_modules():
