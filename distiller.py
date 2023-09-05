@@ -108,12 +108,16 @@ class Distiller(nn.Module):
 
         t_feats, t_out = self.t_net.extract_feature(x)
         s_feats, s_out = self.s_net.extract_feature(x)
+
+
+        t_feats = t_feats.detach()
+
         feat_num = len(t_feats)
 
         b, c, h, w = x.shape
 
-        # y_cpy = y.clone().detach()
-        y_cpy = torch.rand((b, h, w), device = 'cuda')
+        y_cpy = y.clone().detach()
+        # y_cpy = torch.rand((b, h, w), device = 'cuda')
         y_cpy[y_cpy == 255] = 0
 
 
@@ -160,8 +164,8 @@ class Distiller(nn.Module):
             for i in range(b):
                 preds = torch.argmax(t_logit[i], dim = 0)
                 indices = y_cpy[i] != preds
-                val_mx = torch.max(t_logit[i])
-                val_mn = torch.min(t_logit[i])
+                val_mx = torch.max(t_logit[i]).detach()
+                val_mn = torch.min(t_logit[i]).detach()
 
                 print(indices.sum())
 
