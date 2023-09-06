@@ -154,7 +154,7 @@ class Distiller(nn.Module):
             b, c, h, w = s_out.shape
 
             s_logit = torch.reshape(s_out, (b, c, h*w))
-            t_logit = torch.reshape(t_out, (b, c, h*w)).detach()
+            t_logit = torch.reshape(t_out, (b, c, h*w))
 
             # y_cpy = torch.reshape(y_cpy, (b, h*w))
 
