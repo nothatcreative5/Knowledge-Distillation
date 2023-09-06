@@ -154,21 +154,21 @@ class Distiller(nn.Module):
             b, c, h, w = s_out.shape
 
             s_logit = torch.reshape(s_out, (b, c, h*w))
-            t_logit = torch.reshape(t_out, (b, c, h*w))
+            t_logit = torch.reshape(t_out, (b, c, h*w)).detach()
 
-            # y_cpy = torch.reshape(y_cpy, (b, h*w))
+            y_cpy = torch.reshape(y_cpy, (b, h*w))
 
-            # for i in range(b):
-            #     preds = torch.argmax(t_logit[i], dim = 0)
-            #     indices = y_cpy[i] != preds
-            #     val_mx = torch.max(t_logit[i]).detach()
-            #     val_mn = torch.min(t_logit[i]).detach()
+            for i in range(b):
+                preds = torch.argmax(t_logit[i], dim = 0)
+                indices = y_cpy[i] != preds
+                val_mx = torch.max(t_logit[i]).detach()
+                val_mn = torch.min(t_logit[i]).detach()
 
-            #     # print(indices.sum())
+                # print(indices.sum())
 
-            #     corrected_logits = torch.ones((c, indices.sum()), device = 'cuda') * val_mn
-            #     corrected_logits[y_cpy.long()[i][indices], torch.arange(indices.sum())] = val_mx
-            #     t_logit[i][:, indices] = corrected_logits
+                corrected_logits = torch.ones((c, indices.sum()), device = 'cuda') * val_mn
+                corrected_logits[y_cpy.long()[i][indices], torch.arange(indices.sum())] = val_mx
+                t_logit[i][:, indices] = corrected_logits
 
             # b x c x A  mul  b x A x c -> b x c x c
             ICCT = torch.bmm(t_logit, t_logit.permute(0,2,1))
