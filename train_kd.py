@@ -134,12 +134,10 @@ class Trainer(object):
             
             ############# Comment line blow in case of ALW ################
 
-            # if epoch > 89:
-                # SA_loss = 0
-            # else:
-                # ic_loss = 0
+            if epoch < 90:
+                ic_loss = 0
 
-            loss = loss_seg + ic_loss + SA_loss
+            loss = loss_seg + ic_loss
             
             loss.backward()
             optimizer.step()
