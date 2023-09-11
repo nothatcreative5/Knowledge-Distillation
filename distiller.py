@@ -148,6 +148,14 @@ class Distiller(nn.Module):
 
            SA_loss = self.args.SA_lambda * SA_loss
 
+
+        pi_loss = 0
+        if self.args.pi_lambda is not None: # pixelwise loss
+          #TF = F.normalize(t_feats[5].pow(2).mean(1)) 
+          #SF = F.normalize(s_feats[5].pow(2).mean(1)) 
+          #pi_loss = self.args.pi_lambda * (TF - SF).pow(2).mean()
+          pi_loss =  self.args.pi_lambda * torch.nn.KLDivLoss()(F.log_softmax(s_out / self.temperature, dim=1), F.softmax(t_out / self.temperature, dim=1))
+
         # Correct
         ic_loss = 0
         if self.args.ic_lambda is not None: #logits loss
@@ -180,4 +188,4 @@ class Distiller(nn.Module):
             G_diff = ICCS - ICCT
             ic_loss = self.args.ic_lambda * (G_diff * G_diff).view(b, -1).sum() / (c*b)
 
-        return s_out,ic_loss, SA_loss
+        return s_out,ic_loss, SA_loss, pi_loss
