@@ -129,8 +129,8 @@ class Trainer(object):
             loss_seg = self.criterion(output, target)
             
             ########### uncomment lines below for ALW ##################
-            #alpha = epoch/120
-            #loss = alpha * (loss_seg + lo_loss) + (1-alpha) * pi_loss
+            # alpha = epoch/120
+            # loss = alpha * (loss_seg) + (1-alpha) * ic_loss
             
             ############# Comment line blow in case of ALW ################
 
