@@ -125,7 +125,7 @@ class Trainer(object):
             self.scheduler(optimizer, i, epoch, self.best_pred)
             optimizer.zero_grad()
             
-            output, ic_loss, SA_loss, pi_loss = self.d_net(image, target)
+            output, ic_loss, SA_loss, pi_loss, pc_loss = self.d_net(image, target)
             loss_seg = self.criterion(output, target)
             
             ########### uncomment lines below for ALW ##################
@@ -137,7 +137,7 @@ class Trainer(object):
             # else:
                 # ic_loss = 0
 
-            loss = loss_seg + ic_loss + SA_loss + pi_loss
+            loss = loss_seg + ic_loss + SA_loss + pi_loss + pc_loss
             
             loss.backward()
             optimizer.step()
@@ -146,7 +146,7 @@ class Trainer(object):
 
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
         print('Loss: %.3f' % train_loss)
-        print(ic_loss, SA_loss,  loss_seg)
+        print(pc_loss, loss_seg)
         # print(seg_avg / len(tbar), SA_avg / len(tbar))
         # wandb.log({"train loss": train_loss})
 
@@ -287,8 +287,8 @@ def main():
     parser.add_argument('--SA_lambda', type=float, default=None,
                         help='coefficient for Self-attention loss')
     
-    parser.add_argument('--AG_lambda', type = float, default = None, 
-                        help = 'coefficient for Attention Guided loss')
+    parser.add_argument('--pc_lambda', type=float, default=None,
+                        help='coefficient for PCA loss')
     
     parser.add_argument('--teacher_path', type=str, default='/kaggle/working/deeplab-resnet.pth.tar',
                         help='path to the pretrained teache')

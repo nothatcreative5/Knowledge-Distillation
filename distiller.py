@@ -186,4 +186,16 @@ class Distiller(nn.Module):
             G_diff = ICCS - ICCT
             ic_loss = self.args.ic_lambda * (G_diff * G_diff).view(b, -1).sum() / (c*b)
 
-        return s_out,ic_loss, SA_loss, pi_loss
+        pc_loss = 0
+        if self.args.pc_lambda is not None: #unsupervised loss
+            b,c,h,w = t_feats[3].shape
+            s_feats[3] = self.Connectors(s_feats[3])
+            U_S, _, _ = torch.pca_lowrank(s_feats[3].view(b, c, -1), q = 21)
+            U_T, _, _ = torch.pca_lowrank(t_feats[3].view(b, c, -1), q = 21)
+
+            pc_loss = (U_S - U_T).pow(2).mean()
+            pc_loss = self.args.pc_lambda * pc_loss
+
+
+
+        return s_out,ic_loss, SA_loss, pi_loss, pc_loss
