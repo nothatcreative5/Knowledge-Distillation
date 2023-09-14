@@ -189,7 +189,7 @@ class Distiller(nn.Module):
         pc_loss = 0
         if self.args.pc_lambda is not None: #unsupervised loss
             b,c,h,w = t_feats[3].shape
-            s_feats[3] = self.Connectors(s_feats[3])
+            s_feats[3] = self.Connectors[3](s_feats[3])
             U_S, _, _ = torch.pca_lowrank(s_feats[3].view(b, c, -1), q = 21)
             U_T, _, _ = torch.pca_lowrank(t_feats[3].view(b, c, -1), q = 21)
 
